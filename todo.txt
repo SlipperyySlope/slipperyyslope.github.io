@@ -1,13 +1,15 @@
-Add favicon
-Better hover:
-	Show each box as only a thick white outline and then color an inside box white when hovered
-	Keep it highlighted when clicked
-Better mobile display:
-	Aspect ratio improvement
-	Make flipping card proportionally correct
-	Change text
-Different pages and simple menu bar:
-	Page with simple text listing only
-	Rules of Hypnovember
+Add embed [Done]
+Add favicon [Done]
+Aria
+Better hover [Done]
+	Show each box as only a thick white outline and then color an inside box white when hovered [Done]
+	Keep it highlighted when clicked [Done]
+Better mobile display [Done]
+	Aspect ratio improvement [Done]
+	Make flipping card proportionally correct [Done]
+	Change text [Done]
+Different pages and simple menu bar
+	Rules of Hypnovember [Done]
+	Page with simple text listing only [Done]
+	Link to submit content [Done]
 	Submissions aggregation page per day
-	Button to switch from dark to light mode
