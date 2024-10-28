@@ -183,6 +183,10 @@ img {
     text-decoration: underline;
 }
 
+.important {
+    color: #FF0000;
+}
+
 @keyframes slideInLeft {
     from {
         transform: translate(-150%, -50%);
