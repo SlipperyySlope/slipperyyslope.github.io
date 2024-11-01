@@ -1,6 +1,8 @@
 :root {
     --card-size: calc(100vw / 5);
+    --link-margin: calc(100vw / 11);
     --mobile-card-size: calc(100vw / 2);
+    --mobile-link-margin: calc(100vw / 5);
     --grid-gap: calc(100vw / 75);
     --grid-item-size: calc((100vw - (var(--grid-gap) * 11)) / 12);
     --mobile-grid-item-size: calc((100vw - (var(--grid-gap) * 7)) / 8);
@@ -121,6 +123,25 @@ img {
     transform: rotateY(180deg);
 }
 
+.card-url {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    top: var(--link-margin);
+}
+
+.url-text {
+    position: fixed;
+    color: #ffffff;
+    padding: 0px 5px;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.url-text:hover {
+    background-color: #ffffff;
+    color: #000000;
+}
+
 .menu-bar {
     position: fixed;
     top: 0;
@@ -139,12 +160,22 @@ img {
     font-weight: 300;
 }
 
+.menu-item-submit {
+    padding: 10px 20px;
+    width: var(--menu-size);
+    transition: background-color 0.3s, color 0.3s;
+    text-align: center;
+    color: darkgray;
+    cursor: pointer;
+    font-weight: 300;
+}
+
 .menu-item:hover {
     background-color: darkgray;
     color: #ffffff;
 }
 
-.submit:hover {
+.submit:hover, .menu-item-submit:hover {
     background-color: darkblue;
 }
 
@@ -184,7 +215,17 @@ img {
 }
 
 .important {
-    color: #FF0000;
+    color: #ff0000;
+}
+
+.image-content-block, .text-content-block {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+}
+
+.image-content-block h2 a, .text-content-block h2 a {
+    color: lightblue;
 }
 
 @keyframes slideInLeft {
@@ -240,6 +281,9 @@ img {
     .textonly p {
         width: 100%;
     }
+    .card-url {
+        top: var(--mobile-link-margin);
+    }
 }
 
 @media only screen and (max-width: 1300px) {
@@ -250,6 +294,10 @@ img {
     }
     .menu-item {
         width: 33.33%;
+        padding: 20px 0px;
+    }
+    .menu-item-submit {
+        width: 100%;
         padding: 20px 0px;
     }
 }

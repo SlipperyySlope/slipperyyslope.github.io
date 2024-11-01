@@ -20,7 +20,12 @@ for (let i = 1; i <= 30; i++) {
     cardBack.innerHTML = '<img src="cards/day' + i + 'back.png">';
     card.appendChild(cardFront);
     card.appendChild(cardBack);
+    const link = document.createElement('a');
+    link.href = i + '.html';
+    link.className = 'card-url';
+    link.innerHTML = '<span class="url-text">submissions</span>';
     cardDisplay.appendChild(card);
+    cardDisplay.appendChild(link);
     document.getElementById('cards-container').appendChild(cardDisplay);
 }
 

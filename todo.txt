@@ -12,4 +12,4 @@ Different pages and simple menu bar
 	Rules of Hypnovember [Done]
 	Page with simple text listing only [Done]
 	Link to submit content [Done]
-	Submissions aggregation page per day
+	Submissions aggregation page per day [Done]
