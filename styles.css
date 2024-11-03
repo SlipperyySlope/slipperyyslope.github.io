@@ -1,5 +1,6 @@
 :root {
     --card-size: calc(100vw / 5);
+    --content-size: calc(100vw / 2);
     --link-margin: calc(100vw / 11);
     --mobile-card-size: calc(100vw / 2);
     --mobile-link-margin: calc(100vw / 5);
@@ -27,6 +28,10 @@ h2 {
     font-weight: lighter;
 }
 
+.content h2 {
+    border-bottom: 1px solid #ffffff;
+}
+
 a {
     color: #aaaaaa;
     text-decoration: none;
@@ -35,6 +40,10 @@ a {
 
 img {
     width: var(--card-size);
+}
+
+.content img, .content video {
+    width: var(--content-size);
 }
 
 .center-text {
@@ -254,6 +263,9 @@ img {
     /* For mobile phones: */
     img {
         width: var(--mobile-card-size);
+    }
+    .content img, .content video {
+        width: var(--content-size);
     }
     .grid-container {
         grid-template-columns: repeat(7, var(--mobile-grid-item-size));
