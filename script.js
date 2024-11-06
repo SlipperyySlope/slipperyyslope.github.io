@@ -96,6 +96,13 @@ document.querySelectorAll('.textmenu').forEach(item => {
     });
 });
 
+document.querySelectorAll('.entries').forEach(item => {
+    item.addEventListener('click', function(event) {
+        event.stopPropagation();
+        window.open('all.html', '_self').focus();
+    });
+});
+
 document.querySelectorAll('.submit').forEach(item => {
     item.addEventListener('click', function(event) {
 		event.stopPropagation();
