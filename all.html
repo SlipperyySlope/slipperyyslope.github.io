@@ -227,5 +227,13 @@
     </div>
     <h2 class="center-text">by <a href=https://linktr.ee/slippery_slope>@Slippery Slope</a></h2>
     <script src="submissions.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const images = document.querySelectorAll('img');
+            images.forEach((img) => {
+                img.setAttribute('loading', 'lazy');
+            });
+        });
+    </script>
 </body>
 </html>
