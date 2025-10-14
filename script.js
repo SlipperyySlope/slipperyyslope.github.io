@@ -103,6 +103,13 @@ document.querySelectorAll('.entries').forEach(item => {
     });
 });
 
+document.querySelectorAll('.archive').forEach(item => {
+    item.addEventListener('click', function(event) {
+        event.stopPropagation();
+        window.open('2024/index.html', '_self').focus();
+    });
+});
+
 document.querySelectorAll('.submit').forEach(item => {
     item.addEventListener('click', function(event) {
 		event.stopPropagation();
