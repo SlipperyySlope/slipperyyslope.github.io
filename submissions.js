@@ -16,12 +16,16 @@ document.addEventListener('DOMContentLoaded', () => {
             // console.log(json);
             const rows = json.table.rows;
             const container = document.querySelector('.content');
+            let totalSubmissions = 0;
+            const uniqueUsers = new Set();
             for (let i = rows.length - 1; i >= 0; i--) {
                 const row = rows[i];
                 const [username, account, dayValue, link, type, title] = row.c.map(cell => cell?.v || '');
-                // console.log(username + ' ' + account + ' ' + dayValue + ' ' + link + ' ' + type);
                 // Skip header row
                 if (username === 'Username') continue;
+                // Count for stats
+                totalSubmissions++;
+                uniqueUsers.add(username);
                 // Filter by day if not all.html
                 if (!isAllPage && parseInt(dayValue) !== (match ? parseInt(match[1]) : match[1])) continue;
                 let htmlBlock;
@@ -43,13 +47,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     htmlBlock = ''
                 }
                 if (htmlBlock) {
-                    // console.log(htmlBlock);
                     if (isAllPage) {
                         container.insertAdjacentHTML('beforeend', htmlBlock);
                     } else {
                         container.insertAdjacentHTML('afterbegin', htmlBlock);
                     }
                 }
+            }
+            // Add stats to all.html
+            if (isAllPage) {
+                const statsHTML = `
+                    <div class="stats center-text">
+                        Total Entries: ${totalSubmissions}<br>
+                        Participants: ${uniqueUsers.size}
+                    </div>
+                `;
+                document.querySelector('h1').insertAdjacentHTML('afterend', statsHTML);
             }
         })
         .catch(error => console.error('Error fetching data:', error));
