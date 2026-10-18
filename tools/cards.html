@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Card Maker</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+    :root { --fg: #fff; --bg: #000; --muted: #999; --line: #444; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 16px; background: var(--bg); color: var(--fg); font-family: Roboto, sans-serif; font-weight: 300; }
+    h1, h2, h3 { font-weight: 300; margin: 0 0 12px; }
+    h2 { border-bottom: 1px solid var(--fg); padding-bottom: 6px; margin-top: 28px; }
+    a { color: lightblue; }
+    .muted { color: var(--muted); font-size: 0.9rem; }
+    .row { display: flex; flex-wrap: wrap; gap: 16px; }
+    .panel { border: 1px solid var(--line); padding: 12px; flex: 1 1 280px; min-width: 0; }
+    label { display: block; margin: 8px 0 4px; color: var(--muted); font-size: 0.9rem; }
+    textarea, input[type=text], input[type=number], select {
+        width: 100%; font: inherit; background: #000; color: #fff; border: 1px solid #fff; padding: 6px 8px; border-radius: 0;
+    }
+    textarea { height: 220px; resize: vertical; font-size: 0.9rem; line-height: 1.4; }
+    input[type=color] { width: 48px; height: 32px; background: none; border: 1px solid #fff; padding: 0; }
+    input[type=range] { width: 100%; }
+    button, .btn {
+        font: inherit; background: #000; color: #fff; border: 1px solid #fff; padding: 8px 14px; cursor: pointer;
+        transition: background-color 0.2s, color 0.2s; display: inline-block;
+    }
+    button:hover, .btn:hover { background: #fff; color: #000; }
+    button.primary { background: #fff; color: #000; }
+    button.primary:hover { background: darkblue; color: #fff; }
+    .drop { border: 1px dashed var(--muted); padding: 10px; text-align: center; cursor: pointer; display: flex; gap: 10px; align-items: center; justify-content: center; min-height: 64px; }
+    .drop.over { border-color: #fff; background: #111; }
+    .drop img { max-height: 80px; max-width: 60px; }
+    .settings { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0 16px; }
+    .settings .full { grid-column: 1 / -1; }
+    .preview { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+    .preview canvas { width: min(300px, 44vw); height: auto; border: 1px solid var(--line); background: #111; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border-bottom: 1px solid var(--line); padding: 8px 6px; text-align: left; vertical-align: middle; }
+    th { color: var(--muted); font-weight: 300; font-size: 0.9rem; }
+    td .drop { min-height: 56px; padding: 6px; font-size: 0.8rem; color: var(--muted); }
+    td canvas { width: 70px; height: auto; display: block; cursor: pointer; border: 1px solid var(--line); }
+    tr.selected td { background: #111; }
+    .table-wrap { overflow-x: auto; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 16px 0; }
+    pre { white-space: pre-wrap; word-break: break-word; background: #111; padding: 10px; font-size: 0.8rem; max-height: 200px; overflow: auto; }
+    @media (max-width: 700px) { .hide-sm { display: none; } }
+</style>
+</head>
+<body>
+<h1>hypnovember card maker</h1>
+<p class="muted">Not linked from the site. Everything stays in this browser (saved automatically, nothing is uploaded).
+    Steps: card backgrounds → font → paste prompts &amp; characters → drop an image on each row → adjust layout → download.</p>
+
+<h2>1. backgrounds &amp; font</h2>
+<div class="row">
+    <div class="panel">
+        <label>front background (prompt side)</label>
+        <div class="drop" data-asset="frontBg"><span>drop / click to choose</span></div>
+    </div>
+    <div class="panel">
+        <label>back background (character side)</label>
+        <div class="drop" data-asset="backBg"><span>drop / click to choose</span></div>
+    </div>
+    <div class="panel">
+        <label>font file (.ttf .otf .woff .woff2)</label>
+        <div class="drop" data-asset="font"><span id="font-name">drop / click to choose</span></div>
+        <label>…or an installed / Google font name</label>
+        <input type="text" id="fontFallback" placeholder="e.g. Cinzel Decorative">
+    </div>
+</div>
+
+<h2>2. prompts &amp; characters</h2>
+<div class="row">
+    <div class="panel">
+        <label>prompts, one per line, day 1 first</label>
+        <textarea id="prompts" placeholder="Subliminal&#10;Revenge&#10;Cheerleader"></textarea>
+    </div>
+    <div class="panel">
+        <label>characters, one per line, day 1 first</label>
+        <textarea id="characters" placeholder="Autumn Blaze&#10;Lightning Dust&#10;Rainbow Dash"></textarea>
+    </div>
+</div>
+
+<h2>3. layout</h2>
+<div class="row">
+    <div class="panel" style="flex: 2 1 420px">
+        <div class="settings" id="settings"></div>
+    </div>
+    <div class="panel">
+        <div class="preview"><canvas id="bigFront"></canvas><canvas id="bigBack"></canvas></div>
+        <p class="muted" style="text-align:center">previewing day <span id="sel-day">1</span>: click a row below to preview it</p>
+    </div>
+</div>
+
+<h2>4. images per day</h2>
+<p class="muted">Drop an image onto a cell, click it to choose a file, or click a cell and paste (Ctrl+V).</p>
+<div class="table-wrap">
+    <table>
+        <thead><tr><th>day</th><th>prompt</th><th>prompt image</th><th>character</th><th>character image</th><th>front</th><th>back</th></tr></thead>
+        <tbody id="rows"></tbody>
+    </table>
+</div>
+
+<h2>5. export</h2>
+<div class="actions">
+    <button class="primary" id="zip">download all cards (.zip)</button>
+    <button id="copyConfig">copy prompts/characters for config.js</button>
+    <button id="reset">clear everything</button>
+    <span class="muted" id="status"></span>
+</div>
+<p class="muted">Unzip into the site's <code>cards/</code> folder: files are named <code>day1front.png</code>, <code>day1back.png</code>, …</p>
+<pre id="configOut" hidden></pre>
+
+<input type="file" id="picker" hidden>
+
+<script>
+// ---------- tiny IndexedDB key/value store so uploads survive a refresh ----------
+const idb = (() => {
+    let dbp;
+    const db = () => dbp ||= new Promise((res, rej) => {
+        const r = indexedDB.open('cardmaker', 1);
+        r.onupgradeneeded = () => r.result.createObjectStore('kv');
+        r.onsuccess = () => res(r.result);
+        r.onerror = () => rej(r.error);
+    });
+    const tx = async (mode, fn) => {
+        const d = await db();
+        return new Promise((res, rej) => {
+            const t = d.transaction('kv', mode), s = t.objectStore('kv'), r = fn(s);
+            t.oncomplete = () => res(r?.result);
+            t.onerror = () => rej(t.error);
+        });
+    };
+    return {
+        get: k => tx('readonly', s => s.get(k)).catch(() => undefined),
+        set: (k, v) => tx('readwrite', s => s.put(v, k)).catch(() => {}),
+        del: k => tx('readwrite', s => s.delete(k)).catch(() => {}),
+        clear: () => tx('readwrite', s => s.clear()).catch(() => {}),
+    };
+})();
+
+// ---------- settings ----------
+const SETTINGS = [
+    ['h', 'front (prompt) side'],
+    ['frontColor', 'text color', 'color', '#ee8a3c'],
+    ['frontSize', 'max text size (px)', 'number', 52],
+    ['frontY', 'text position (% from top)', 'range', 33],
+    ['frontImgY', 'image center (% from top)', 'range', 60],
+    ['frontImgW', 'image max width (% of card)', 'range', 32],
+    ['frontImgH', 'image max height (% of card)', 'range', 22],
+    ['numStyle', 'day number', 'select', 'roman', ['roman', 'arabic', 'none']],
+    ['numY', 'number position (% from top)', 'range', 96.6],
+    ['numSize', 'number size (px)', 'number', 26],
+    ['h', 'back (character) side'],
+    ['backColor', 'text color', 'color', '#7d5b55'],
+    ['backSize', 'max text size (px)', 'number', 52],
+    ['backY', 'text position (% from top)', 'range', 33],
+    ['backImgY', 'image center (% from top)', 'range', 60],
+    ['backImgW', 'image max width (% of card)', 'range', 32],
+    ['backImgH', 'image max height (% of card)', 'range', 22],
+    ['h', 'both sides'],
+    ['textW', 'max text width (% of card)', 'range', 78],
+    ['upper', 'UPPERCASE text', 'checkbox', true],
+    ['shadow', 'soft shadow behind images', 'checkbox', false],
+];
+const S = {};
+const settingsEl = document.getElementById('settings');
+for (const [key, label, type, def, opts] of SETTINGS) {
+    if (key === 'h') { settingsEl.insertAdjacentHTML('beforeend', `<h3 class="full" style="margin-top:12px">${label}</h3>`); continue; }
+    S[key] = def;
+    let input;
+    if (type === 'select') input = `<select id="s-${key}">${opts.map(o => `<option>${o}</option>`).join('')}</select>`;
+    else if (type === 'range') input = `<input type="range" id="s-${key}" min="0" max="100" step="0.2">`;
+    else input = `<input type="${type}" id="s-${key}">`;
+    settingsEl.insertAdjacentHTML('beforeend', `<div><label for="s-${key}">${label} <span id="v-${key}"></span></label>${input}</div>`);
+}
+function syncSettingInputs() {
+    for (const k in S) {
+        const el = document.getElementById('s-' + k);
+        if (el.type === 'checkbox') el.checked = S[k]; else el.value = S[k];
+        const v = document.getElementById('v-' + k);
+        if (el.type === 'range') v.textContent = S[k];
+    }
+}
+settingsEl.addEventListener('input', e => {
+    const k = e.target.id.slice(2);
+    if (!(k in S)) return;
+    S[k] = e.target.type === 'checkbox' ? e.target.checked : e.target.type === 'color' || e.target.tagName === 'SELECT' ? e.target.value : +e.target.value;
+    if (e.target.type === 'range') document.getElementById('v-' + k).textContent = S[k];
+    save(); scheduleRender();
+});
+
+// ---------- state ----------
+const assets = { frontBg: null, backBg: null };   // ImageBitmaps
+const dayImgs = {};                               // 'p3' / 'c3' -> ImageBitmap
+let fontFamily = 'serif';
+let selected = 1;
+
+const lines = id => document.getElementById(id).value.split('\n').map(s => s.trim());
+const lastFilled = id => { const l = lines(id); let i = l.length; while (i && !l[i - 1]) i--; return i; };
+const dayCount = () => Math.max(30, lastFilled('prompts'), lastFilled('characters'));
+function texts(day) {
+    return { prompt: lines('prompts')[day - 1] || '', character: lines('characters')[day - 1] || '' };
+}
+
+function save() {
+    localStorage.setItem('cardmaker', JSON.stringify({ S, prompts: prompts.value, characters: characters.value, fontFallback: fontFallback.value }));
+}
+
+// ---------- drawing ----------
+function roman(n) {
+    const map = [[1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'], [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']];
+    let s = '';
+    for (const [v, r] of map) while (n >= v) { s += r; n -= v; }
+    return s;
+}
+
+// Shrink text to fit; if it gets too small, split onto two lines
+function drawFitted(ctx, text, cx, cy, maxW, size) {
+    if (!text) return;
+    if (S.upper) text = text.toUpperCase();
+    const font = px => `${px}px "${fontFamily}", ${S.fallbackFont || 'serif'}`;
+    const fit = (str, px) => { ctx.font = font(px); while (px > 8 && ctx.measureText(str).width > maxW) { px -= 1; ctx.font = font(px); } return px; };
+    let px = fit(text, size);
+    const words = text.split(/\s+/);
+    if (px < size * 0.7 && words.length > 1) {
+        // best split = most even line widths
+        let best = null;
+        for (let i = 1; i < words.length; i++) {
+            const a = words.slice(0, i).join(' '), b = words.slice(i).join(' ');
+            ctx.font = font(size);
+            const w = Math.max(ctx.measureText(a).width, ctx.measureText(b).width);
+            if (!best || w < best.w) best = { a, b, w };
+        }
+        const p2 = Math.min(fit(best.a, size), fit(best.b, size));
+        ctx.font = font(p2);
+        ctx.fillText(best.a, cx, cy - p2 * 0.55);
+        ctx.fillText(best.b, cx, cy + p2 * 0.55);
+        return;
+    }
+    ctx.font = font(px);
+    ctx.fillText(text, cx, cy);
+}
+
+function drawImageBox(ctx, img, cy, maxW, maxH) {
+    if (!img) return;
+    const scale = Math.min(maxW / img.width, maxH / img.height);
+    const w = img.width * scale, h = img.height * scale;
+    const W = ctx.canvas.width;
+    if (S.shadow) { ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 18; ctx.shadowOffsetY = 6; }
+    ctx.drawImage(img, (W - w) / 2, cy - h / 2, w, h);
+    ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+}
+
+function drawCard(canvas, day, side) {
+    const bg = side === 'front' ? assets.frontBg : assets.backBg;
+    const W = bg ? bg.width : 601, Hh = bg ? bg.height : 897;
+    canvas.width = W; canvas.height = Hh;
+    const ctx = canvas.getContext('2d');
+    if (bg) ctx.drawImage(bg, 0, 0);
+    else { ctx.fillStyle = '#222'; ctx.fillRect(0, 0, W, Hh); }
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const t = texts(day);
+    const f = side === 'front';
+    ctx.fillStyle = f ? S.frontColor : S.backColor;
+    drawFitted(ctx, f ? t.prompt : t.character, W / 2, Hh * (f ? S.frontY : S.backY) / 100, W * S.textW / 100, f ? S.frontSize : S.backSize);
+    drawImageBox(ctx, dayImgs[(f ? 'p' : 'c') + day], Hh * (f ? S.frontImgY : S.backImgY) / 100,
+        W * (f ? S.frontImgW : S.backImgW) / 100, Hh * (f ? S.frontImgH : S.backImgH) / 100);
+    if (f && S.numStyle !== 'none') {
+        ctx.fillStyle = S.frontColor;
+        ctx.font = `${S.numSize}px "${fontFamily}", ${S.fallbackFont || 'serif'}`;
+        ctx.fillText(S.numStyle === 'roman' ? roman(day) : String(day), W / 2, Hh * S.numY / 100);
+    }
+}
+
+// ---------- table ----------
+const rowsEl = document.getElementById('rows');
+function buildRows() {
+    const n = dayCount();
+    let html = '';
+    for (let d = 1; d <= n; d++) {
+        html += `<tr data-day="${d}">
+            <td>${d}</td>
+            <td class="t-prompt"></td>
+            <td><div class="drop" tabindex="0" data-img="p${d}"><span>prompt img</span></div></td>
+            <td class="t-char"></td>
+            <td><div class="drop" tabindex="0" data-img="c${d}"><span>character img</span></div></td>
+            <td><canvas class="mini-front"></canvas></td>
+            <td><canvas class="mini-back"></canvas></td>
+        </tr>`;
+    }
+    rowsEl.innerHTML = html;
+    rowsEl.querySelectorAll('[data-img]').forEach(el => { setupDrop(el, file => setDayImage(el.dataset.img, file)); refreshThumb(el); });
+    renderAll();
+}
+
+function refreshThumb(el) {
+    const img = dayImgs[el.dataset.img];
+    const span = el.querySelector('span');
+    el.querySelector('img')?.remove();
+    if (img) {
+        const c = document.createElement('canvas');
+        c.width = img.width; c.height = img.height;
+        c.getContext('2d').drawImage(img, 0, 0);
+        const thumb = new Image();
+        thumb.src = c.toDataURL('image/png');
+        el.prepend(thumb);
+        span.textContent = '✓ change';
+    } else span.textContent = el.dataset.img[0] === 'p' ? 'prompt img' : 'character img';
+}
+
+let renderTimer = null;
+function scheduleRender() { clearTimeout(renderTimer); renderTimer = setTimeout(renderAll, 60); }
+function renderAll() {
+    rowsEl.querySelectorAll('tr').forEach(tr => {
+        const d = +tr.dataset.day, t = texts(d);
+        tr.querySelector('.t-prompt').textContent = t.prompt || '—';
+        tr.querySelector('.t-char').textContent = t.character || '—';
+        drawCard(tr.querySelector('.mini-front'), d, 'front');
+        drawCard(tr.querySelector('.mini-back'), d, 'back');
+        tr.classList.toggle('selected', d === selected);
+    });
+    renderBig();
+}
+function renderBig() {
+    document.getElementById('sel-day').textContent = selected;
+    drawCard(document.getElementById('bigFront'), selected, 'front');
+    drawCard(document.getElementById('bigBack'), selected, 'back');
+}
+rowsEl.addEventListener('click', e => {
+    const tr = e.target.closest('tr');
+    if (!tr || e.target.closest('.drop')) return;
+    selected = +tr.dataset.day;
+    rowsEl.querySelectorAll('tr').forEach(r => r.classList.toggle('selected', r === tr));
+    renderBig();
+});
+
+// ---------- uploads ----------
+const picker = document.getElementById('picker');
+let pickCallback = null;
+picker.onchange = () => { if (picker.files[0]) pickCallback(picker.files[0]); picker.value = ''; };
+
+function setupDrop(el, onFile) {
+    el.addEventListener('click', () => {
+        pickCallback = onFile;
+        picker.accept = el.dataset.asset === 'font' ? '.ttf,.otf,.woff,.woff2' : 'image/*';
+        picker.click();
+    });
+    el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('over'); });
+    el.addEventListener('dragleave', () => el.classList.remove('over'));
+    el.addEventListener('drop', e => {
+        e.preventDefault(); el.classList.remove('over');
+        const f = e.dataTransfer.files[0];
+        if (f) onFile(f);
+    });
+    el.addEventListener('paste', e => {
+        const item = [...e.clipboardData.items].find(i => i.type.startsWith('image/'));
+        if (item) { e.preventDefault(); onFile(item.getAsFile()); }
+    });
+}
+
+async function setDayImage(key, blob, persist = true) {
+    try { dayImgs[key] = await createImageBitmap(blob); } catch { status('that file is not an image'); return; }
+    if (persist) idb.set(key, blob);
+    const el = rowsEl.querySelector(`[data-img="${key}"]`);
+    if (el) refreshThumb(el);
+    const d = +key.slice(1);
+    selected = d;
+    renderAll();
+}
+
+async function setAsset(key, blob, persist = true) {
+    if (key === 'font') {
+        try {
+            const face = new FontFace('CardFont', await blob.arrayBuffer());
+            await face.load();
+            document.fonts.add(face);
+            fontFamily = 'CardFont';
+            document.getElementById('font-name').textContent = '✓ ' + (blob.name || 'saved font') + ' (change)';
+        } catch { status("couldn't read that font file"); return; }
+    } else {
+        try { assets[key] = await createImageBitmap(blob); } catch { status('that file is not an image'); return; }
+        const el = document.querySelector(`[data-asset="${key}"]`);
+        el.querySelector('img')?.remove();
+        const t = new Image(); t.src = URL.createObjectURL(blob); el.prepend(t);
+        el.querySelector('span').textContent = '✓ change';
+    }
+    if (persist) idb.set(key, blob);
+    renderAll();
+}
+document.querySelectorAll('[data-asset]').forEach(el => setupDrop(el, f => setAsset(el.dataset.asset, f)));
+
+// ---------- text inputs ----------
+const prompts = document.getElementById('prompts');
+const characters = document.getElementById('characters');
+const fontFallback = document.getElementById('fontFallback');
+let lastCount = 30;
+[prompts, characters].forEach(t => t.addEventListener('input', () => {
+    save();
+    if (dayCount() !== lastCount) { lastCount = dayCount(); buildRows(); } else scheduleRender();
+}));
+fontFallback.addEventListener('input', () => {
+    S.fallbackFont = fontFallback.value ? `"${fontFallback.value}"` : '';
+    // try pulling it from Google Fonts too
+    const id = 'gf-link';
+    document.getElementById(id)?.remove();
+    if (fontFallback.value) {
+        const l = document.createElement('link');
+        l.id = id; l.rel = 'stylesheet';
+        l.href = 'https://fonts.googleapis.com/css2?family=' + encodeURIComponent(fontFallback.value) + '&display=block';
+        l.onload = () => document.fonts.load(`40px "${fontFallback.value}"`).then(renderAll);
+        document.head.appendChild(l);
+    }
+    save(); scheduleRender();
+});
+
+// ---------- export ----------
+function status(msg) { document.getElementById('status').textContent = msg; }
+const toBlob = c => new Promise(r => c.toBlob(r, 'image/png'));
+
+document.getElementById('zip').onclick = async () => {
+    const zip = new JSZip();
+    const c = document.createElement('canvas');
+    const n = dayCount();
+    for (let d = 1; d <= n; d++) {
+        status(`drawing day ${d}/${n}…`);
+        drawCard(c, d, 'front'); zip.file(`day${d}front.png`, await toBlob(c));
+        drawCard(c, d, 'back'); zip.file(`day${d}back.png`, await toBlob(c));
+    }
+    status('zipping…');
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'hypnovember-cards.zip';
+    a.click();
+    status(`done: ${n * 2} cards`);
+};
+
+// click a big preview to download just that card
+['bigFront', 'bigBack'].forEach(id => {
+    const c = document.getElementById(id);
+    c.style.cursor = 'pointer';
+    c.title = 'click to download this card';
+    c.onclick = async () => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(await toBlob(c));
+        a.download = `day${selected}${id === 'bigFront' ? 'front' : 'back'}.png`;
+        a.click();
+    };
+});
+
+document.getElementById('copyConfig').onclick = () => {
+    const q = s => `'${s.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
+    const n = dayCount();
+    const p = [], ch = [];
+    for (let d = 1; d <= n; d++) { const t = texts(d); p.push(q(t.prompt || 'TBD')); ch.push(q(t.character || 'TBD')); }
+    const out = `    prompts: [\n        ${p.join(',\n        ')},\n    ],\n    characters: [\n        ${ch.join(',\n        ')},\n    ],`;
+    const pre = document.getElementById('configOut');
+    pre.textContent = out; pre.hidden = false;
+    navigator.clipboard?.writeText(out).then(() => status('copied: paste over the prompts/characters lines in config.js'), () => status('select the text below and copy it'));
+};
+
+document.getElementById('reset').onclick = async () => {
+    if (!confirm('Clear all text, settings and uploaded images from this browser?')) return;
+    localStorage.removeItem('cardmaker');
+    await idb.clear();
+    location.reload();
+};
+
+// ---------- restore ----------
+(async () => {
+    try {
+        const saved = JSON.parse(localStorage.getItem('cardmaker') || 'null');
+        if (saved) {
+            Object.assign(S, saved.S);
+            prompts.value = saved.prompts || '';
+            characters.value = saved.characters || '';
+            fontFallback.value = saved.fontFallback || '';
+            if (fontFallback.value) fontFallback.dispatchEvent(new Event('input'));
+        }
+    } catch {}
+    syncSettingInputs();
+    lastCount = dayCount();
+    buildRows();
+    for (const key of ['frontBg', 'backBg', 'font']) {
+        const b = await idb.get(key);
+        if (b) await setAsset(key, b, false);
+    }
+    // first visit: start from last year's blank card backgrounds if they're there
+    for (const [key, path] of [['frontBg', '../2025/cards/basicfront.png'], ['backBg', '../2025/cards/basicback.png']]) {
+        if (assets[key]) continue;
+        try { const r = await fetch(path); if (r.ok) await setAsset(key, await r.blob(), false); } catch {}
+    }
+    for (let d = 1; d <= dayCount(); d++) for (const k of ['p' + d, 'c' + d]) {
+        const b = await idb.get(k);
+        if (b) await setDayImage(k, b, false);
+    }
+    selected = 1;
+    renderAll();
+})();
+</script>
+</body>
+</html>

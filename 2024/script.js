@@ -106,7 +106,7 @@ document.querySelectorAll('.entries').forEach(item => {
 document.querySelectorAll('.latest').forEach(item => {
     item.addEventListener('click', function(event) {
         event.stopPropagation();
-        window.open('../index.html', '_self').focus();
+        window.open('../2025/index.html', '_self').focus();
     });
 });
 

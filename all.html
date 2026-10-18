@@ -3,29 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hypnovember 2025</title>
-    <meta name="title" content="Hypnovember 2025" />
-    <meta name="description" content="All submissions" />
-    <!-- OpenGraph -->
+    <title>Hypnovember 2026 · entries</title>
+    <meta name="description" content="Every Hypnovember 2026 entry in one place: art and stories, sortable by day, artist, and type." />
+    <meta name="theme-color" content="#000000" />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://slipperyyslope.github.io/" />
-    <meta property="og:title" content="Hypnovember 2025" />
-    <meta property="og:description" content="All submissions" />
+    <meta property="og:site_name" content="slippery slope" />
+    <meta property="og:url" content="https://slipperyyslope.github.io/all.html" />
+    <meta property="og:title" content="Hypnovember 2026 · entries" />
+    <meta property="og:description" content="Every Hypnovember 2026 entry in one place: art and stories, sortable by day, artist, and type." />
     <meta property="og:image" content="https://slipperyyslope.github.io/favicon.png" />
+    <meta property="og:image:alt" content="Hypnovember logo" />
+    <meta name="twitter:card" content="summary" />
     <link rel="stylesheet" href="styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap" rel="stylesheet">
-    <link rel="icon" type="image/jpg" href="favicon.png" />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100;300;400;500&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://wsrv.nl">
+    <link rel="icon" type="image/png" href="favicon.png" />
 </head>
 <body>
-    <div class="menu-bar">
-        <div class="menu-item-submit home"><a href="index.html">home</a></div>
+    <nav class="menu-bar">
+        <a class="menu-item home" href="index.html">home</a>
+        <a class="menu-item submit" id="submit-link" target="_blank" rel="noopener">submit</a>
+    </nav>
+    <h1 class="center-text">hypnovember <span class="year"></span></h1>
+    <div class="stats center-text" id="stats">loading entries…</div>
+
+    <div class="controls" id="controls" hidden>
+        <label class="control">sort
+            <select id="sort">
+                <option value="newest">newest first</option>
+                <option value="oldest">oldest first</option>
+                <option value="day">by day</option>
+                <option value="artist">by artist</option>
+            </select>
+        </label>
+        <div class="toggle" role="group" aria-label="type">
+            <button data-type="all" aria-pressed="true">all</button>
+            <button data-type="art" aria-pressed="false">art</button>
+            <button data-type="story" aria-pressed="false">stories</button>
+        </div>
+        <label class="control">day
+            <select id="day"><option value="">all days</option></select>
+        </label>
+        <label class="control">artist
+            <select id="artist"><option value="">everyone</option></select>
+        </label>
+        <button class="clear-filter" id="clear" hidden>clear filters</button>
     </div>
-    <h1 class="center-text">hypnovember 2025</h1>
-    <p>newest at top</p>
-    <div class="content"></div>
-    <h2 class="center-text">by <a href=https://linktr.ee/slippery_slope>@Slippery Slope</a></h2>
-    <script src="submissions.js"></script>
+
+    <div id="results"></div>
+
+    <div class="lightbox" id="lightbox" role="dialog" aria-label="image viewer">
+        <button class="lb-btn lb-close" aria-label="close">×</button>
+        <button class="lb-btn lb-prev" aria-label="previous">‹</button>
+        <button class="lb-btn lb-next" aria-label="next">›</button>
+        <div class="lb-media"></div>
+        <div class="lb-caption"></div>
+    </div>
+
+    <h2 class="center-text footer">by <a href="https://linktr.ee/slippery_slope">@Slippery Slope</a></h2>
+    <script src="config.js"></script>
+    <script src="common.js"></script>
+    <script src="entries.js"></script>
 </body>
 </html>
