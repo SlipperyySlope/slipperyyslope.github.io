@@ -1,6 +1,6 @@
 /* Hypnovember 2026+ (shared by index.html and all.html). Past years keep their own copy. */
 :root {
-    --card-ratio: calc(897 / 601);
+    --card-ratio: calc(831 / 540);
     /* card is 1/5 of the width, but never taller than ~75% of the screen */
     --card-size: min(calc(100vw / 5), calc(75vh / var(--card-ratio)));
     --grid-gap: calc(100vw / 75);
@@ -129,7 +129,7 @@ button {
 
 .card {
     width: var(--card-size);
-    aspect-ratio: 601 / 897;
+    aspect-ratio: 540 / 831;
     position: relative;
     transform-style: preserve-3d;
     transition: transform 0.6s;
