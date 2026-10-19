@@ -21,6 +21,7 @@
     textarea, input[type=text], input[type=number], select {
         width: 100%; font: inherit; background: #000; color: #fff; border: 1px solid #fff; padding: 6px 8px; border-radius: 0;
     }
+    textarea.emoji-box { font-size: 1.15rem; line-height: 1.22; text-align: center; }
     textarea { height: 220px; resize: vertical; font-size: 0.9rem; line-height: 1.4; }
     input[type=color] { width: 48px; height: 32px; background: none; border: 1px solid #fff; padding: 0; }
     input[type=range] { width: 100%; }
@@ -37,6 +38,8 @@
     .settings { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0 16px; }
     .settings .full { grid-column: 1 / -1; }
     .preview { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+    .preview-nav { display: flex; justify-content: center; align-items: center; gap: 16px; margin-top: 12px; }
+    .preview-nav button { font-size: 1.4rem; line-height: 1; padding: 4px 14px; }
     .preview canvas { width: min(300px, 44vw); height: auto; border: 1px solid var(--line); background: #111; }
     table { border-collapse: collapse; width: 100%; }
     th, td { border-bottom: 1px solid var(--line); padding: 8px 6px; text-align: left; vertical-align: middle; }
@@ -79,11 +82,17 @@
         <label>prompts, one per line, day 1 first</label>
         <textarea id="prompts" placeholder="Subliminal&#10;Revenge&#10;Cheerleader"></textarea>
     </div>
+    <div class="panel" style="flex: 0 1 140px">
+        <label>prompt emojis, one per line</label>
+        <textarea id="emojis" class="emoji-box" placeholder="👁️‍🗨️&#10;😈&#10;📣"></textarea>
+    </div>
     <div class="panel">
         <label>characters, one per line, day 1 first</label>
         <textarea id="characters" placeholder="Autumn Blaze&#10;Lightning Dust&#10;Rainbow Dash"></textarea>
     </div>
 </div>
+
+<p class="muted">Long names wrap onto two lines (set where in step 3). A "/" becomes the break point and turns into a thin divider line. Type "|" to force a break anywhere, e.g. <code>Contagious|Brainwashing</code>.</p>
 
 <h2>3. layout</h2>
 <div class="row">
@@ -92,15 +101,20 @@
     </div>
     <div class="panel">
         <div class="preview"><canvas id="bigFront"></canvas><canvas id="bigBack"></canvas></div>
-        <p class="muted" style="text-align:center">previewing day <span id="sel-day">1</span>: click a row below to preview it</p>
+        <div class="preview-nav">
+            <button id="prevDay" aria-label="previous day">‹</button>
+            <span class="muted">day <span id="sel-day">1</span></span>
+            <button id="nextDay" aria-label="next day">›</button>
+        </div>
+        <p class="muted" style="text-align:center">arrows (or ← → keys) to flip through days, or click a row below</p>
     </div>
 </div>
 
-<h2>4. images per day</h2>
-<p class="muted">Drop an image onto a cell, click it to choose a file, or click a cell and paste (Ctrl+V).</p>
+<h2>4. character images</h2>
+<p class="muted">Prompt sides use the emoji from step 2. For characters, drop an image onto a cell, click it to choose a file, or click a cell and paste (Ctrl+V).</p>
 <div class="table-wrap">
     <table>
-        <thead><tr><th>day</th><th>prompt</th><th>prompt image</th><th>character</th><th>character image</th><th>front</th><th>back</th></tr></thead>
+        <thead><tr><th>day</th><th>prompt</th><th>emoji</th><th>character</th><th>character image</th><th>front</th><th>back</th></tr></thead>
         <tbody id="rows"></tbody>
     </table>
 </div>
@@ -149,9 +163,8 @@ const SETTINGS = [
     ['frontColor', 'text color', 'color', '#ee8a3c'],
     ['frontSize', 'max text size (px)', 'number', 52],
     ['frontY', 'text position (% from top)', 'range', 33],
-    ['frontImgY', 'image center (% from top)', 'range', 60],
-    ['frontImgW', 'image max width (% of card)', 'range', 32],
-    ['frontImgH', 'image max height (% of card)', 'range', 22],
+    ['frontImgY', 'emoji center (% from top)', 'range', 60],
+    ['emojiSize', 'emoji size (px)', 'number', 120],
     ['numStyle', 'day number', 'select', 'roman', ['roman', 'arabic', 'none']],
     ['numY', 'number position (% from top)', 'range', 96.6],
     ['numSize', 'number size (px)', 'number', 26],
@@ -164,6 +177,11 @@ const SETTINGS = [
     ['backImgH', 'image max height (% of card)', 'range', 22],
     ['h', 'both sides'],
     ['textW', 'max text width (% of card)', 'range', 78],
+    ['wrapAt', 'go to 2 lines when wider than (% of card)', 'range', 70],
+    ['lineSpace', 'space between lines (% of text size)', 'range', 22],
+    ['dividerThick', '"/" divider thickness (px)', 'number', 1.5],
+    ['dividerLength', '"/" divider length (% of shorter line)', 'range', 40],
+    ['dividerSpace', 'space between divider and text (px)', 'number', 14],
     ['upper', 'UPPERCASE text', 'checkbox', true],
     ['shadow', 'soft shadow behind images', 'checkbox', false],
 ];
@@ -175,7 +193,7 @@ for (const [key, label, type, def, opts] of SETTINGS) {
     let input;
     if (type === 'select') input = `<select id="s-${key}">${opts.map(o => `<option>${o}</option>`).join('')}</select>`;
     else if (type === 'range') input = `<input type="range" id="s-${key}" min="0" max="100" step="0.2">`;
-    else input = `<input type="${type}" id="s-${key}">`;
+    else input = `<input type="${type}" id="s-${key}"${type === 'number' ? ' step="any"' : ''}>`;
     settingsEl.insertAdjacentHTML('beforeend', `<div><label for="s-${key}">${label} <span id="v-${key}"></span></label>${input}</div>`);
 }
 function syncSettingInputs() {
@@ -202,13 +220,13 @@ let selected = 1;
 
 const lines = id => document.getElementById(id).value.split('\n').map(s => s.trim());
 const lastFilled = id => { const l = lines(id); let i = l.length; while (i && !l[i - 1]) i--; return i; };
-const dayCount = () => Math.max(30, lastFilled('prompts'), lastFilled('characters'));
+const dayCount = () => Math.max(30, lastFilled('prompts'), lastFilled('characters'), lastFilled('emojis'));
 function texts(day) {
-    return { prompt: lines('prompts')[day - 1] || '', character: lines('characters')[day - 1] || '' };
+    return { prompt: lines('prompts')[day - 1] || '', character: lines('characters')[day - 1] || '', emoji: lines('emojis')[day - 1] || '' };
 }
 
 function save() {
-    localStorage.setItem('cardmaker', JSON.stringify({ S, prompts: prompts.value, characters: characters.value, fontFallback: fontFallback.value }));
+    localStorage.setItem('cardmaker', JSON.stringify({ S, prompts: prompts.value, characters: characters.value, emojis: emojis.value, fontFallback: fontFallback.value }));
 }
 
 // ---------- drawing ----------
@@ -220,30 +238,67 @@ function roman(n) {
 }
 
 // Shrink text to fit; if it gets too small, split onto two lines
+// Text wider than the "wrap" setting goes onto two lines. A "/" becomes the split
+// point and turns into a thin divider line; a "|" forces a break anywhere.
+// Anything still wider than the max width shrinks to fit.
 function drawFitted(ctx, text, cx, cy, maxW, size) {
     if (!text) return;
     if (S.upper) text = text.toUpperCase();
     const font = px => `${px}px "${fontFamily}", ${S.fallbackFont || 'serif'}`;
     const fit = (str, px) => { ctx.font = font(px); while (px > 8 && ctx.measureText(str).width > maxW) { px -= 1; ctx.font = font(px); } return px; };
-    let px = fit(text, size);
-    const words = text.split(/\s+/);
-    if (px < size * 0.7 && words.length > 1) {
-        // best split = most even line widths
-        let best = null;
-        for (let i = 1; i < words.length; i++) {
-            const a = words.slice(0, i).join(' '), b = words.slice(i).join(' ');
-            ctx.font = font(size);
-            const w = Math.max(ctx.measureText(a).width, ctx.measureText(b).width);
-            if (!best || w < best.w) best = { a, b, w };
+    const widthAt = (str, px) => { ctx.font = font(px); return ctx.measureText(str).width; };
+
+    let lines = null, divider = false;
+    if (text.includes('|')) {
+        lines = text.split('|').map(t => t.trim()).filter(Boolean);
+    } else if (widthAt(text, size) > ctx.canvas.width * S.wrapAt / 100) {
+        if (text.includes('/')) {
+            const i = text.indexOf('/');
+            lines = [text.slice(0, i).trim(), text.slice(i + 1).trim()];
+            divider = true;
+        } else {
+            const words = text.split(/\s+/);
+            let best = null; // most even pair of lines
+            for (let i = 1; i < words.length; i++) {
+                const a = words.slice(0, i).join(' '), b = words.slice(i).join(' ');
+                const w = Math.max(widthAt(a, size), widthAt(b, size));
+                if (!best || w < best.w) best = { a, b, w };
+            }
+            if (best) lines = [best.a, best.b];
         }
-        const p2 = Math.min(fit(best.a, size), fit(best.b, size));
-        ctx.font = font(p2);
-        ctx.fillText(best.a, cx, cy - p2 * 0.55);
-        ctx.fillText(best.b, cx, cy + p2 * 0.55);
+    }
+    if (!lines || lines.length < 2) {
+        const px = fit(lines ? lines[0] : text, size);
+        ctx.font = font(px);
+        ctx.fillText(lines ? lines[0] : text, cx, cy);
         return;
     }
+
+    const px = Math.min(...lines.map(l => fit(l, size)));
     ctx.font = font(px);
-    ctx.fillText(text, cx, cy);
+    // lay lines out by the actual ink of the letters (not the font's line box),
+    // so the gaps above and below the divider really are equal
+    ctx.save();
+    ctx.textBaseline = 'alphabetic'; // measure against the same baseline we draw with
+    const m = lines.map(l => {
+        const t = ctx.measureText(l);
+        return { l, w: t.width, up: t.actualBoundingBoxAscent, down: t.actualBoundingBoxDescent };
+    });
+    const gap = divider ? S.dividerSpace * 2 + S.dividerThick : px * S.lineSpace / 100;
+    const total = m.reduce((h, x) => h + x.up + x.down, 0) + gap * (m.length - 1);
+    let y = cy - total / 2;
+    m.forEach((x, i) => {
+        ctx.fillText(x.l, cx, y + x.up);
+        y += x.up + x.down;
+        if (i < m.length - 1) {
+            if (divider) {
+                const w = Math.min(...m.map(k => k.w)) * S.dividerLength / 100;
+                ctx.fillRect(cx - w / 2, y + S.dividerSpace, w, S.dividerThick);
+            }
+            y += gap;
+        }
+    });
+    ctx.restore();
 }
 
 function drawImageBox(ctx, img, cy, maxW, maxH) {
@@ -254,6 +309,18 @@ function drawImageBox(ctx, img, cy, maxW, maxH) {
     if (S.shadow) { ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 18; ctx.shadowOffsetY = 6; }
     ctx.drawImage(img, (W - w) / 2, cy - h / 2, w, h);
     ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+}
+
+// emoji drawn with whatever emoji font this browser/OS has (Segoe on Windows, Apple on Mac)
+const EMOJI_FONT = '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Twemoji Mozilla", sans-serif';
+function drawEmoji(ctx, emoji, cx, cy, size) {
+    if (!emoji) return;
+    ctx.save();
+    ctx.font = `${size}px ${EMOJI_FONT}`;
+    ctx.fillStyle = '#000'; // emoji fonts are colour; this only matters for plain symbols
+    if (S.shadow) { ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 18; ctx.shadowOffsetY = 6; }
+    ctx.fillText(emoji, cx, cy);
+    ctx.restore();
 }
 
 function drawCard(canvas, day, side) {
@@ -269,8 +336,8 @@ function drawCard(canvas, day, side) {
     const f = side === 'front';
     ctx.fillStyle = f ? S.frontColor : S.backColor;
     drawFitted(ctx, f ? t.prompt : t.character, W / 2, Hh * (f ? S.frontY : S.backY) / 100, W * S.textW / 100, f ? S.frontSize : S.backSize);
-    drawImageBox(ctx, dayImgs[(f ? 'p' : 'c') + day], Hh * (f ? S.frontImgY : S.backImgY) / 100,
-        W * (f ? S.frontImgW : S.backImgW) / 100, Hh * (f ? S.frontImgH : S.backImgH) / 100);
+    if (f) drawEmoji(ctx, t.emoji, W / 2, Hh * S.frontImgY / 100, S.emojiSize);
+    else drawImageBox(ctx, dayImgs['c' + day], Hh * S.backImgY / 100, W * S.backImgW / 100, Hh * S.backImgH / 100);
     if (f && S.numStyle !== 'none') {
         ctx.fillStyle = S.frontColor;
         ctx.font = `${S.numSize}px "${fontFamily}", ${S.fallbackFont || 'serif'}`;
@@ -287,7 +354,7 @@ function buildRows() {
         html += `<tr data-day="${d}">
             <td>${d}</td>
             <td class="t-prompt"></td>
-            <td><div class="drop" tabindex="0" data-img="p${d}"><span>prompt img</span></div></td>
+            <td class="t-emoji" style="font-size:1.6rem;text-align:center"></td>
             <td class="t-char"></td>
             <td><div class="drop" tabindex="0" data-img="c${d}"><span>character img</span></div></td>
             <td><canvas class="mini-front"></canvas></td>
@@ -311,7 +378,7 @@ function refreshThumb(el) {
         thumb.src = c.toDataURL('image/png');
         el.prepend(thumb);
         span.textContent = '✓ change';
-    } else span.textContent = el.dataset.img[0] === 'p' ? 'prompt img' : 'character img';
+    } else span.textContent = 'character img';
 }
 
 let renderTimer = null;
@@ -320,6 +387,7 @@ function renderAll() {
     rowsEl.querySelectorAll('tr').forEach(tr => {
         const d = +tr.dataset.day, t = texts(d);
         tr.querySelector('.t-prompt').textContent = t.prompt || '—';
+        tr.querySelector('.t-emoji').textContent = t.emoji || '—';
         tr.querySelector('.t-char').textContent = t.character || '—';
         drawCard(tr.querySelector('.mini-front'), d, 'front');
         drawCard(tr.querySelector('.mini-back'), d, 'back');
@@ -327,6 +395,21 @@ function renderAll() {
     });
     renderBig();
 }
+// preview arrows, wrapping around after the last day
+function stepPreview(dir) {
+    const n = dayCount();
+    selected = (selected - 1 + dir + n) % n + 1;
+    rowsEl.querySelectorAll('tr').forEach(r => r.classList.toggle('selected', +r.dataset.day === selected));
+    renderBig();
+}
+document.getElementById('prevDay').onclick = () => stepPreview(-1);
+document.getElementById('nextDay').onclick = () => stepPreview(1);
+document.addEventListener('keydown', e => {
+    if (e.target.closest?.('input, textarea, select')) return;
+    if (e.key === 'ArrowLeft') stepPreview(-1);
+    if (e.key === 'ArrowRight') stepPreview(1);
+});
+
 function renderBig() {
     document.getElementById('sel-day').textContent = selected;
     drawCard(document.getElementById('bigFront'), selected, 'front');
@@ -398,9 +481,10 @@ document.querySelectorAll('[data-asset]').forEach(el => setupDrop(el, f => setAs
 // ---------- text inputs ----------
 const prompts = document.getElementById('prompts');
 const characters = document.getElementById('characters');
+const emojis = document.getElementById('emojis');
 const fontFallback = document.getElementById('fontFallback');
 let lastCount = 30;
-[prompts, characters].forEach(t => t.addEventListener('input', () => {
+[prompts, characters, emojis].forEach(t => t.addEventListener('input', () => {
     save();
     if (dayCount() !== lastCount) { lastCount = dayCount(); buildRows(); } else scheduleRender();
 }));
@@ -480,6 +564,7 @@ document.getElementById('reset').onclick = async () => {
             Object.assign(S, saved.S);
             prompts.value = saved.prompts || '';
             characters.value = saved.characters || '';
+            emojis.value = saved.emojis || '';
             fontFallback.value = saved.fontFallback || '';
             if (fontFallback.value) fontFallback.dispatchEvent(new Event('input'));
         }
@@ -496,7 +581,7 @@ document.getElementById('reset').onclick = async () => {
         if (assets[key]) continue;
         try { const r = await fetch(path); if (r.ok) await setAsset(key, await r.blob(), false); } catch {}
     }
-    for (let d = 1; d <= dayCount(); d++) for (const k of ['p' + d, 'c' + d]) {
+    for (let d = 1; d <= dayCount(); d++) for (const k of ['c' + d]) {
         const b = await idb.get(k);
         if (b) await setDayImage(k, b, false);
     }

@@ -39,11 +39,8 @@ The site reads columns **by header name**, so column order doesn't matter and ex
 | Link | yes | story URL or image/video URL. Several image links separated by spaces or new lines = one multi-image entry |
 | Type | | `Art` or `Story` (image links count as art automatically) |
 | Title | | story title, optional caption for art |
-| Added | | date/time it was added. If present, "newest first" uses it; otherwise row order is used |
-| Thumbnail | | optional custom thumbnail URL |
 
-Suggested 2026 tab: copy the 2025 tab's header row and add `Added` (in Google Sheets, Ctrl+Shift+Alt+; inserts the
-current date and time). Add a dropdown (Data → Data validation) on Type with Art / Story so typos can't happen.
+Entries are ordered by their row in the sheet: add new ones at the bottom. Optional: add a dropdown (Data → Data validation) on Type with Art / Story so typos can't happen.
 Then put the tab's `gid` (the number after `#gid=` in the URL) into `config.js`.
 
 ## New year checklist
