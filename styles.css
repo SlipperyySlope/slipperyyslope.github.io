@@ -368,6 +368,51 @@ button {
 
 .footer { margin-top: 40px; }
 
+/* ---------- commissions page ---------- */
+.comm-badge {
+    position: absolute; top: 8px; left: 8px;
+    background: #000; color: #fff; border: 1px solid #fff;
+    padding: 2px 8px; font-size: 0.8rem; letter-spacing: 0.05em;
+}
+.comm-badge.ych { background: #fff; color: #000; }
+.entry-meta .price { color: #fff; text-align: right; }
+.entry-meta span:has(+ .price) { white-space: nowrap; }
+.subtitle { color: #fff; margin: -0.6em 0 14px; padding-bottom: 0; }
+.kofi { color: var(--muted); font-size: 0.9rem; margin: 48px 0 -24px; padding-bottom: 0; }
+.kofi a { color: var(--link); }
+.kofi a:hover { text-decoration: underline; }
+
+/* detail view: picture on the left, info box on the right */
+.comm-view .comm-body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    width: 100%;
+    height: 100%;
+}
+.comm-view .lb-media img, .comm-view .lb-media video { max-height: calc(100vh - 64px); }
+.comm-info {
+    position: relative;
+    width: 380px;
+    flex-shrink: 0;
+    max-height: calc(100vh - 64px);
+    overflow-y: auto;
+    background: #000;
+    border: 10px solid #fff;
+    padding: 20px 24px;
+    text-align: left;
+}
+.comm-info .comm-badge { position: static; display: inline-block; }
+.comm-info h2 { margin: 12px 0 8px; }
+.comm-info p { margin: 8px 0; color: var(--muted); }
+.comm-info a { color: #fff; text-decoration: underline; }
+.comm-info .comm-price { color: #fff; font-size: 1.2rem; }
+.comm-info .comm-desc { color: #fff; white-space: pre-wrap; border-top: 1px solid #444; padding-top: 12px; }
+.comm-info .comm-link { color: var(--link); }
+.no-vt .comm-body.from-right { animation: vt-slide-in-right 0.3s ease both; }
+.no-vt .comm-body.from-left { animation: vt-slide-in-left 0.3s ease both; }
+
 /* ---------- tablets and phones ---------- */
 @media only screen and (max-width: 1300px) {
     .menu-bar { position: relative; width: calc(100% + 32px); margin: 0 -16px; }
@@ -390,6 +435,9 @@ button {
     .entry-meta { flex-direction: column; gap: 0; font-size: 0.8rem; }
     .entry-story { padding: 12px; }
     .entry-story h3 { font-size: 1.05rem; }
+    .entry-meta .price { text-align: left; }
+    .comm-view .comm-body { flex-direction: column; justify-content: flex-start; gap: 12px; padding-top: 40px; }
+    .comm-info { width: 100%; border-width: 6px; max-height: none; flex-shrink: 1; min-height: 0; }
 }
 
 /* ---------- all-page animations ---------- */

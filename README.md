@@ -8,6 +8,7 @@ Run locally with `start-server.bat`, then open http://localhost:8000.
 | path | what |
 | --- | --- |
 | `index.html`, `all.html` | current year (calendar + one entries page) |
+| `commissions.html` | commission / YCH offers, grouped by day (reads `commissionGid` in `config.js`; `?demo` shows sample offers) |
 | `config.js` | **the only file to edit each year**: year, prompts, characters, sheet tab |
 | `common.js`, `script.js`, `entries.js`, `styles.css` | shared code for the current year |
 | `cards/dayNfront.png`, `cards/dayNback.png` | card art (missing cards show a plain "TBD" placeholder) |

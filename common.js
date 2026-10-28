@@ -18,6 +18,34 @@ function safeUrl(u) {
     return /^https?:\/\//i.test(u) ? u : '';
 }
 
+const MEDIA_RE = /\.(png|jpe?g|gif|webp|avif|bmp|mp4|webm|mov)(\?|$)/i;
+const VIDEO_RE = /\.(mp4|webm|mov)(\?|$)/i;
+
+// ---------- images ----------
+// Small, cached copies via wsrv.nl (free image CDN) so the page loads fast;
+// falls back to the original file if the proxy fails. Full size opens in the viewer.
+function thumbUrl(url, w = 480) {
+    if (VIDEO_RE.test(url)) return url;
+    const anim = /\.gif(\?|$)/i.test(url) ? '&n=-1' : '';
+    return `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=${w}&we&output=webp&q=85${anim}`;
+}
+
+// screen-sized copy for the viewer: sharp, but far smaller than the original file
+function viewerUrl(url, cssWidth) {
+    const w = Math.min(4000, Math.max(800, Math.ceil(cssWidth * (devicePixelRatio || 1) / 400) * 400));
+    return thumbUrl(url, w);
+}
+
+function mediaTag(url, { full = false, alt = '' } = {}) {
+    if (VIDEO_RE.test(url)) {
+        return full
+            ? `<video src="${esc(url)}" controls autoplay loop playsinline></video>`
+            : `<video src="${esc(url)}#t=0.1" muted loop playsinline preload="metadata"></video>`;
+    }
+    const src = full ? url : thumbUrl(url);
+    return `<img src="${esc(src)}" data-original="${esc(url)}" alt="${esc(alt)}" loading="${full ? 'eager' : 'lazy'}" decoding="async">`;
+}
+
 // ---- popups: same slide in / slide out as previous years ----
 function showPanel(el) {
     el.style.display = 'block';

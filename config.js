@@ -14,6 +14,8 @@ const HYPNOVEMBER = {
     // the 2026 tab exists and the site will say "no entries yet".
     sheetId: '1gvU4YH6lKy1N8BE7RLRPIotoqyDikZ8x_28nuR3rGh0',
     gid: 1164754374,
+    // Tab with commission / YCH offers (same sheet). null hides the page's list.
+    commissionGid: 2060066158,
 
     // Prompts and characters, in day order (day 1 first). Anything
     // missing shows as "TBD".

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hypnovember 2026 · commissions</title>
+    <meta name="description" content="Commissions and YCHs offered for Hypnovember 2026" />
+    <meta name="theme-color" content="#000000" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="slippery slope" />
+    <meta property="og:url" content="https://slipperyyslope.github.io/commissions.html" />
+    <meta property="og:title" content="Hypnovember 2026 · commissions" />
+    <meta property="og:description" content="Commissions and YCHs offered for Hypnovember 2026" />
+    <meta property="og:image" content="https://slipperyyslope.github.io/favicon.png" />
+    <meta property="og:image:alt" content="Hypnovember logo" />
+    <meta name="twitter:card" content="summary" />
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100;300;400;500&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://wsrv.nl">
+    <link rel="icon" type="image/png" href="favicon.png" />
+</head>
+<body>
+    <nav class="menu-bar">
+        <a class="menu-item home" href="index.html">home</a>
+        <a class="menu-item submit" id="submit-link" target="_blank" rel="noopener">submit</a>
+    </nav>
+    <h1 class="center-text">hypnovember <span class="year"></span> commissions</h1>
+    <p class="subtitle center-text">Wanna participate in Hypnovember but don't know how? Consider supporting a participating artist!</p>
+    <div class="stats center-text" id="stats">loading commissions…</div>
+
+    <div class="controls" id="controls">
+        <div class="toggle" role="group" aria-label="type">
+            <button data-type="all" aria-pressed="true">all</button>
+            <button data-type="commission" aria-pressed="false">commissions</button>
+            <button data-type="ych" aria-pressed="false">YCHs</button>
+        </div>
+        <label class="control">day
+            <select id="day"><option value="">all days</option></select>
+        </label>
+        <button class="clear-filter" id="clear" hidden>clear filters</button>
+    </div>
+
+    <div id="results"></div>
+
+    <div class="lightbox comm-view" id="lightbox" role="dialog" aria-label="commission details">
+        <button class="lb-btn lb-close" aria-label="close">×</button>
+        <button class="lb-btn lb-prev" aria-label="previous">‹</button>
+        <button class="lb-btn lb-next" aria-label="next">›</button>
+        <div class="comm-body">
+            <div class="lb-media"></div>
+            <div class="comm-info"></div>
+        </div>
+    </div>
+
+    <p class="kofi center-text">Or consider <a href="https://ko-fi.com/slipperyslope" target="_blank" rel="noopener">supporting me</a> ♡</p>
+    <h2 class="center-text footer">by <a href="https://linktr.ee/slippery_slope">@Slippery Slope</a></h2>
+    <script src="config.js"></script>
+    <script src="common.js"></script>
+    <script src="commissions.js"></script>
+</body>
+</html>
