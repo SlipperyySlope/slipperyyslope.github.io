@@ -79,7 +79,21 @@ button {
     .menu-item.submit:hover, .menu-item.home:hover { background-color: darkblue; }
 }
 
-.menu-item.submit { color: lightblue; text-decoration: underline; }
+.menu-item.submit { color: lightblue; text-decoration: underline; position: relative; isolation: isolate; }
+/* spiral fades in behind "submit" on hover (cropped to fill the button, never stretched) */
+.menu-item.submit::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: #000 url(submit.gif) center / cover;
+    opacity: 0;
+    transition: opacity 1s ease;
+}
+@media (hover: hover) {
+    .menu-item.submit:hover::before { opacity: 1; }
+    .menu-item.submit:hover { text-shadow: 0 0 4px #000, 0 0 8px #000; }
+}
 
 /* ---------- calendar ---------- */
 .grid-container {
