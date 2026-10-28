@@ -233,7 +233,7 @@ const setAnim = a => document.documentElement.dataset.lbAnim = a;
 function fitImage(img, ratio) {
     if (!ratio) return;
     const narrow = innerWidth <= 768;
-    const maxW = narrow ? innerWidth - 32 : innerWidth - 32 - 420;
+    const maxW = narrow ? innerWidth - 32 : innerWidth - 32 - 96 - 404;
     const maxH = narrow ? innerHeight * 0.5 : innerHeight - 64;
     let w = maxW, h = w / ratio;
     if (h > maxH) { h = maxH; w = h * ratio; }
@@ -266,7 +266,9 @@ async function prepare(i) {
         node.src = thumbUrl(o.image); // cached from the grid
         node.onerror = () => { node.onerror = null; node.src = o.image; };
         await Promise.race([node.decode().catch(() => {}), new Promise(r => setTimeout(r, 400))]);
+        // slow picture (e.g. the thumbnail proxy failed): size it as soon as it arrives instead
         if (node.naturalWidth) fitImage(node, node.naturalWidth / node.naturalHeight);
+        else node.addEventListener('load', () => fitImage(node, node.naturalWidth / node.naturalHeight), { once: true });
     }
     return () => {
         lbMedia()?.cancelFull?.();
@@ -293,8 +295,10 @@ function loadFull() {
     const done = () => { if (img.isConnected || hi.isConnected) lb.classList.remove('loading'); };
     hi.onload = () => hi.decode().then(() => {
         if (!img.isConnected) return;
-        hi.style.width = img.style.width;
-        hi.style.height = img.style.height;
+        if (img.style.width) {
+            hi.style.width = img.style.width;
+            hi.style.height = img.style.height;
+        } else fitImage(hi, hi.naturalWidth / hi.naturalHeight);
         hi.dataset.full = 'done';
         img.replaceWith(hi);
         done();
@@ -366,8 +370,9 @@ document.getElementById('results').addEventListener('click', ev => {
 lb.querySelector('.lb-close').onclick = closeView;
 lb.querySelector('.lb-prev').onclick = () => step(-1);
 lb.querySelector('.lb-next').onclick = () => step(1);
+// clicking the empty space around the picture and info box closes
 lb.addEventListener('click', ev => {
-    if (ev.target === lb || ev.target.classList.contains('comm-body') || ev.target.classList.contains('lb-media')) closeView();
+    if (!ev.target.closest('.comm-info, .lb-btn, .lb-media img, .lb-media video')) closeView();
 });
 document.addEventListener('keydown', ev => {
     if (!lbOpen) return;
