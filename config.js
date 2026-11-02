@@ -88,6 +88,10 @@ const HYPNOVEMBER = {
         // 'Starfall Shine': 'https://derpibooru.org/3525023',
     },
 
+    // Cloudflare Worker that keeps view and heart counts (see stats-worker/).
+    // null hides the counts.
+    statsApi: 'https://hypnovember-stats.mlpfursuit.workers.dev',
+
     // Past years, newest first: shown in the menu
     archives: [2025, 2024],
 };

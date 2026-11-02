@@ -135,6 +135,101 @@ async function load() {
     render();
 }
 
+// ---------- views and hearts ----------
+// Counts live in a small Cloudflare Worker (stats-worker/), keyed by each entry's
+// first link. If it can't be reached the page works the same, just without numbers.
+// A view is an opened piece (or a clicked story link), at most once a day per browser.
+const counts = new Map(); // key -> [views, hearts]
+const statKey = e => e.links[0];
+
+function readStore(name) {
+    try { return JSON.parse(localStorage.getItem(name)) || {}; } catch { return {}; }
+}
+function writeStore(name, value) {
+    try { localStorage.setItem(name, JSON.stringify(value)); } catch {}
+}
+const hearted = readStore('hv-hearts'); // key -> 1
+const seen = readStore('hv-seen');      // key -> day it was last counted
+
+const EYE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1.5 12S5.5 4.5 12 4.5 22.5 12 22.5 12 18.5 19.5 12 19.5 1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3.2"/></svg>';
+const HEART = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-8.5-5.2-8.5-11A4.8 4.8 0 0 1 12 6.6a4.8 4.8 0 0 1 8.5 2.9c0 5.8-8.5 11-8.5 11z"/></svg>';
+
+function statsHtml(e) {
+    if (!H.statsApi) return '';
+    const key = statKey(e);
+    const [views, hearts] = counts.get(key) || [0, 0];
+    return `<span class="entry-stats" data-stats="${esc(key)}">` +
+        `<span class="views" title="views">${EYE}<span class="n">${views}</span></span>` +
+        `<button class="heart" aria-pressed="${!!hearted[key]}" aria-label="heart">${HEART}<span class="n">${hearts}</span></button></span>`;
+}
+
+function paintStats(key) {
+    const [views, hearts] = counts.get(key) || [0, 0];
+    document.querySelectorAll(`[data-stats="${CSS.escape(key)}"]`).forEach(el => {
+        el.querySelector('.views .n').textContent = views;
+        el.querySelector('.heart .n').textContent = hearts;
+        el.querySelector('.heart').setAttribute('aria-pressed', !!hearted[key]);
+    });
+}
+
+function sendStat(path, body) {
+    // text/plain skips the CORS preflight; the worker reads it as JSON anyway
+    fetch(H.statsApi + path, { method: 'POST', body: JSON.stringify(body), keepalive: true }).catch(() => {});
+}
+
+async function loadCounts() {
+    if (!H.statsApi) return;
+    try {
+        const res = await fetch(H.statsApi + '/counts');
+        Object.entries(await res.json()).forEach(([k, v]) => counts.set(k, v));
+    } catch (err) {
+        console.error('Error fetching counts:', err);
+        return;
+    }
+    document.documentElement.classList.add('stats-on');
+    counts.forEach((_, key) => paintStats(key));
+}
+
+function countView(e) {
+    if (!H.statsApi) return;
+    const key = statKey(e);
+    const today = new Date().toISOString().slice(0, 10);
+    if (seen[key] === today) return;
+    for (const k in seen) if (seen[k] !== today) delete seen[k];
+    seen[key] = today;
+    writeStore('hv-seen', seen);
+    const c = counts.get(key) || [0, 0];
+    counts.set(key, [c[0] + 1, c[1]]);
+    paintStats(key);
+    sendStat('/view', { key });
+}
+
+function toggleHeart(key) {
+    const on = !hearted[key];
+    if (on) hearted[key] = 1; else delete hearted[key];
+    writeStore('hv-hearts', hearted);
+    const c = counts.get(key) || [0, 0];
+    counts.set(key, [c[0], Math.max(0, c[1] + (on ? 1 : -1))]);
+    paintStats(key);
+    sendStat('/heart', { key, on });
+}
+
+document.addEventListener('click', ev => {
+    const heart = ev.target.closest('.entry-stats .heart');
+    if (heart) toggleHeart(heart.closest('[data-stats]').dataset.stats);
+});
+
+// story links open in a new tab: count left and middle clicks
+const storyClick = ev => {
+    const link = ev.target.closest('.entry-story a');
+    if (!link || ev.button > 1) return;
+    const order = +link.closest('[data-key]').dataset.key.slice(1);
+    const e = entries.find(x => x.order === order);
+    if (e) countView(e);
+};
+document.getElementById('results').addEventListener('click', storyClick);
+document.getElementById('results').addEventListener('auxclick', storyClick);
+
 // ---------- controls ----------
 function readUrl() {
     const p = new URLSearchParams(location.search);
@@ -254,7 +349,7 @@ function entryHtml(e) {
         ? `<a href="${esc(e.account)}" target="_blank" rel="noopener">${esc(e.username)}</a>`
         : esc(e.username);
     const dayLink = e.day ? `<span>day ${e.day}</span>` : '';
-    const meta = `<div class="entry-meta"><span>by ${by}</span>${dayLink}</div>`;
+    const meta = `<div class="entry-meta"><span>by ${by}</span><span class="entry-side">${dayLink}${statsHtml(e)}</span></div>`;
     if (e.type === 'art') {
         const alt = `${e.title || 'art'} by ${e.username}`;
         const count = e.links.length > 1 ? `<span class="count">1/${e.links.length}</span>` : '';
@@ -351,12 +446,13 @@ async function prepareItem(i) {
     const alt = `${e.title || 'art'} by ${e.username}`;
     const by = e.account ? `<a href="${esc(e.account)}" target="_blank" rel="noopener">${esc(e.username)}</a>` : esc(e.username);
     const part = e.links.length > 1 ? ` · ${n + 1}/${e.links.length}` : '';
-    const caption = `${e.title ? esc(e.title) + ' · ' : ''}by ${by}${e.day ? ' · ' + dayHeading(e.day) : ''}${part} · <a href="${esc(url)}" target="_blank" rel="noopener">original</a>`;
+    const caption = `${e.title ? esc(e.title) + ' · ' : ''}by ${by}${e.day ? ' · ' + dayHeading(e.day) : ''}${part} · <a href="${esc(url)}" target="_blank" rel="noopener">original</a>${statsHtml(e)}`;
     const media = lb.querySelector('.lb-media');
     const apply = node => () => {
         lbMedia()?.cancelFull?.();
         lb.classList.remove('loading');
         lightboxIndex = index;
+        countView(e);
         lb.querySelector('.lb-caption').innerHTML = caption;
         node ? media.replaceChildren(node) : (media.innerHTML = mediaTag(url, { full: true, alt }));
     };
@@ -514,3 +610,4 @@ lb.addEventListener('touchend', ev => {
 readUrl();
 setupControls();
 load();
+loadCounts();

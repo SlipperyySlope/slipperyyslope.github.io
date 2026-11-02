@@ -1,0 +1,8 @@
+name = "hypnovember-stats"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "hypnovember-stats"
+database_id = "86245249-73f4-44bd-8e43-8be81946f540"

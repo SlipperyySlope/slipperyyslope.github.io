@@ -320,6 +320,19 @@ button {
     color: var(--muted);
 }
 .entry-meta a { color: #fff; }
+.entry-side { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+
+/* view and heart counts, shown once they've loaded */
+.entry-stats { display: none; align-items: center; gap: 10px; }
+.stats-on .entry-stats { display: inline-flex; }
+.lb-caption .entry-stats { margin-left: 14px; vertical-align: middle; }
+.entry-stats > * { display: inline-flex; align-items: center; gap: 4px; }
+.entry-stats svg { width: 1.05em; height: 1.05em; fill: none; stroke: currentColor; stroke-width: 2; }
+.entry-stats .heart { padding: 2px; margin: -2px; transition: color 0.2s; }
+.entry-stats .heart svg { transition: fill 0.2s, transform 0.2s; }
+@media (hover: hover) { .entry-stats .heart:hover { color: #fff; } }
+.entry-stats .heart[aria-pressed="true"] { color: #ff6b8b; }
+.entry-stats .heart[aria-pressed="true"] svg { fill: currentColor; transform: scale(1.1); }
 .entry-meta a:hover, .entry-story h3 a:hover { text-decoration: underline; }
 
 .empty { color: var(--muted); text-align: center; margin: 48px 0; }
