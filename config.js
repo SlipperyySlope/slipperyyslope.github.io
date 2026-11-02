@@ -91,6 +91,8 @@ const HYPNOVEMBER = {
     // Cloudflare Worker that keeps view and heart counts (see stats-worker/).
     // null hides the counts.
     statsApi: 'https://hypnovember-stats.mlpfursuit.workers.dev',
+    // Show the heart button next to the view count (hearts are kept either way)
+    hearts: false,
 
     // Past years, newest first: shown in the menu
     archives: [2025, 2024],

@@ -158,17 +158,21 @@ function statsHtml(e) {
     if (!H.statsApi) return '';
     const key = statKey(e);
     const [views, hearts] = counts.get(key) || [0, 0];
+    const heart = H.hearts
+        ? `<button class="heart" aria-pressed="${!!hearted[key]}" aria-label="heart">${HEART}<span class="n">${hearts}</span></button>`
+        : '';
     return `<span class="entry-stats" data-stats="${esc(key)}">` +
-        `<span class="views" title="views">${EYE}<span class="n">${views}</span></span>` +
-        `<button class="heart" aria-pressed="${!!hearted[key]}" aria-label="heart">${HEART}<span class="n">${hearts}</span></button></span>`;
+        `<span class="views" title="views">${EYE}<span class="n">${views}</span></span>${heart}</span>`;
 }
 
 function paintStats(key) {
     const [views, hearts] = counts.get(key) || [0, 0];
     document.querySelectorAll(`[data-stats="${CSS.escape(key)}"]`).forEach(el => {
         el.querySelector('.views .n').textContent = views;
-        el.querySelector('.heart .n').textContent = hearts;
-        el.querySelector('.heart').setAttribute('aria-pressed', !!hearted[key]);
+        const heart = el.querySelector('.heart');
+        if (!heart) return;
+        heart.querySelector('.n').textContent = hearts;
+        heart.setAttribute('aria-pressed', !!hearted[key]);
     });
 }
 
@@ -468,8 +472,8 @@ async function prepareItem(i) {
         lbMedia()?.cancelFull?.();
         lb.classList.remove('loading');
         lightboxIndex = index;
-        countView(e);
         lb.querySelector('.lb-caption').innerHTML = caption;
+        countView(e);
         node ? media.replaceChildren(node) : (media.innerHTML = mediaTag(url, { full: true, alt }));
     };
     if (VIDEO_RE.test(url)) return apply(null);
