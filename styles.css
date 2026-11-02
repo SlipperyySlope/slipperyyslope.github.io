@@ -320,7 +320,10 @@ button {
     color: var(--muted);
 }
 .entry-meta a { color: #fff; }
-.entry-side { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+/* long names push the day and counts onto their own line instead of into the next box */
+.entry-meta { flex-wrap: wrap; row-gap: 2px; }
+.entry-meta > :first-child { min-width: 0; overflow-wrap: anywhere; }
+.entry-side { display: flex; align-items: center; gap: 10px; white-space: nowrap; margin-left: auto; }
 
 /* view and heart counts, shown once they've loaded */
 .entry-stats { display: none; align-items: center; gap: 10px; }
@@ -328,11 +331,37 @@ button {
 .lb-caption .entry-stats { margin-left: 14px; vertical-align: middle; }
 .entry-stats > * { display: inline-flex; align-items: center; gap: 4px; }
 .entry-stats svg { width: 1.05em; height: 1.05em; fill: none; stroke: currentColor; stroke-width: 2; }
-.entry-stats .heart { padding: 2px; margin: -2px; transition: color 0.2s; }
+.entry-stats .heart { position: relative; padding: 2px; margin: -2px; transition: color 0.2s; }
 .entry-stats .heart svg { transition: fill 0.2s, transform 0.2s; }
-@media (hover: hover) { .entry-stats .heart:hover { color: #fff; } }
+/* heart stands out while the entry is hovered or focused */
+.entry:focus-within .heart:not([aria-pressed="true"]),
+.lb-caption .heart:not([aria-pressed="true"]) { color: #fff; }
+.entry:focus-within .heart svg { transform: scale(1.2); }
+@media (hover: hover) {
+    .entry:hover .heart:not([aria-pressed="true"]) { color: #fff; }
+    .entry:hover .heart svg, .entry-stats .heart:hover svg { transform: scale(1.2); }
+    .entry-stats .heart:hover:not([aria-pressed="true"]) { color: #ff6b8b; }
+}
 .entry-stats .heart[aria-pressed="true"] { color: #ff6b8b; }
-.entry-stats .heart[aria-pressed="true"] svg { fill: currentColor; transform: scale(1.1); }
+.entry-stats .heart[aria-pressed="true"] svg { fill: currentColor; transform: scale(1.2); }
+
+/* little hearts that float up and fade when you heart something */
+.heart-bubble {
+    position: absolute;
+    left: 2px; top: 2px;
+    width: 1.05em; height: 1.05em;
+    color: #ff6b8b;
+    pointer-events: none;
+    z-index: 5;
+    animation: heart-bubble 0.9s ease-out var(--delay) both;
+}
+.entry .entry-stats .heart .heart-bubble svg { fill: currentColor; stroke: none; transform: none; }
+@keyframes heart-bubble {
+    0%   { transform: translate(0, 0) scale(0.5); opacity: 1; }
+    30%  { opacity: 1; }
+    100% { transform: translate(var(--dx), -42px) scale(var(--size)); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .heart-bubble { display: none; } }
 .entry-meta a:hover, .entry-story h3 a:hover { text-decoration: underline; }
 
 .empty { color: var(--muted); text-align: center; margin: 48px 0; }

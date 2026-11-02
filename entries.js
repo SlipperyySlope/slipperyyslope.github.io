@@ -214,9 +214,25 @@ function toggleHeart(key) {
     sendStat('/heart', { key, on });
 }
 
+// a few small hearts drift up from the button and fade out
+function bubbleHearts(btn) {
+    for (let i = 0; i < 3; i++) {
+        const b = document.createElement('span');
+        b.className = 'heart-bubble';
+        b.innerHTML = HEART;
+        b.style.setProperty('--dx', `${(i - 1) * 10 + (Math.random() * 6 - 3)}px`);
+        b.style.setProperty('--size', (1.2 + Math.random() * 0.5).toFixed(2));
+        b.style.setProperty('--delay', `${i * 90}ms`);
+        b.addEventListener('animationend', () => b.remove());
+        btn.append(b);
+    }
+}
+
 document.addEventListener('click', ev => {
     const heart = ev.target.closest('.entry-stats .heart');
-    if (heart) toggleHeart(heart.closest('[data-stats]').dataset.stats);
+    if (!heart) return;
+    toggleHeart(heart.closest('[data-stats]').dataset.stats);
+    if (heart.getAttribute('aria-pressed') === 'true') bubbleHearts(heart);
 });
 
 // story links open in a new tab: count left and middle clicks
