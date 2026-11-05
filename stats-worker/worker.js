@@ -31,7 +31,7 @@ export default {
             let body;
             try { body = await req.json(); } catch { return json(req, { error: 'bad json' }, 400); }
             const key = String(body?.key || '');
-            if (!/^https?:\/\//i.test(key) || key.length > 500) return json(req, { error: 'bad key' }, 400);
+            if (!/^https?:\/\//i.test(key) || key.length > 4000) return json(req, { error: 'bad key' }, 400);
 
             if (pathname === '/view') {
                 await env.DB.prepare('INSERT INTO counts (key, views) VALUES (?, 1) ON CONFLICT(key) DO UPDATE SET views = views + 1').bind(key).run();
