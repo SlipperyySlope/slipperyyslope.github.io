@@ -420,6 +420,9 @@ button {
 .entry-meta .price { color: #fff; text-align: right; }
 .entry-meta span:has(+ .price) { white-space: nowrap; }
 .subtitle { color: #fff; margin: -0.6em 0 14px; padding-bottom: 0; }
+.artist-cta { color: var(--muted); font-size: 0.95rem; margin: 0 0 14px; padding-bottom: 0; }
+.artist-cta .discord { color: #5865F2; font-weight: 500; }
+.artist-cta .discord-handle { color: #57F287; font-weight: 500; }
 .kofi { color: var(--muted); font-size: 0.9rem; margin: 48px 0 -24px; padding-bottom: 0; }
 .kofi a { color: var(--link); }
 .kofi a:hover { text-decoration: underline; }
