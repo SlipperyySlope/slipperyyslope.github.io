@@ -221,6 +221,17 @@ button {
 
 /* ---------- all entries page ---------- */
 .stats { color: var(--muted); padding-bottom: 0; }
+.support-cta { color: #fff; margin: -0.6em 0 6px; padding-bottom: 0; }
+.support-cta a {
+    color: var(--link);
+    padding: 1px 4px;
+    transition: background-color 0.3s, color 0.3s;
+}
+.support-cta a:hover, .support-cta a:focus-visible, .support-cta a:active {
+    background: #fff;
+    color: #000;
+    text-decoration: underline;
+}
 
 #results { width: 100%; max-width: 1400px; }
 
@@ -417,6 +428,25 @@ button {
     padding: 2px 8px; font-size: 0.8rem; letter-spacing: 0.05em;
 }
 .comm-badge.ych { background: #fff; color: #000; }
+/* on the entries page the tag sits over the box's corner and links to the offer */
+.entry { position: relative; }
+.entry > .comm-badge { z-index: 1; }
+a.comm-badge { transition: background-color 0.3s, color 0.3s; }
+a.comm-badge:hover, a.comm-badge:focus-visible { background: #fff; color: #000; text-decoration: underline; }
+a.comm-badge.ych:hover, a.comm-badge.ych:focus-visible { background: #000; color: #fff; }
+
+/* entries made from an offer, inside its detail box */
+.comm-examples { border-top: 1px solid #444; margin-top: 12px; padding-top: 12px; }
+.comm-examples > p { margin: 0 0 8px; }
+.comm-example-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
+.comm-info a.comm-example { display: block; aspect-ratio: 1; overflow: hidden; background: #111; text-decoration: none; }
+.comm-example img, .comm-example video { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; transition: opacity 0.3s; }
+@media (hover: hover) { .comm-example:hover img, .comm-example:hover video { opacity: 0.8; } }
+.comm-info a.comm-example.story {
+    border: 1px solid #fff; padding: 6px; font-size: 0.8rem; color: var(--link);
+    display: flex; flex-direction: column; justify-content: center; text-align: center; gap: 4px;
+}
+.comm-example.story span { color: var(--muted); }
 .entry-meta .price { color: #fff; text-align: right; }
 .entry-meta span:has(+ .price) { white-space: nowrap; }
 .subtitle { color: #fff; margin: -0.6em 0 14px; padding-bottom: 0; }
@@ -492,6 +522,7 @@ button {
     .entry-story { padding: 12px; }
     .entry-story h3 { font-size: 1.05rem; }
     .entry-meta .price { text-align: left; }
+    .entry > .comm-badge { top: 6px; left: 6px; padding: 1px 6px; font-size: 0.7rem; }
     .comm-view .comm-body { flex-direction: column; justify-content: flex-start; gap: 12px; padding: 40px 0 0; }
     .comm-info { width: 100%; border-width: 6px; max-height: none; flex-shrink: 1; min-height: 0; }
 }

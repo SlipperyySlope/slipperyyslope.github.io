@@ -3,17 +3,6 @@
 // URL keeps the current view, e.g. commissions.html?type=ych&day=5
 // commissions.html?demo shows made-up offers, for trying the page out before the sheet has any.
 
-const COMM_COLUMNS = {
-    username: ['username', 'name', 'artist'],
-    account: ['account', 'profile', 'account link', 'artist link'],
-    day: ['day'],
-    link: ['link', 'links', 'url'],
-    title: ['title'],
-    type: ['type'],
-    price: ['price', 'cost'],
-    description: ['description', 'details', 'info'],
-};
-
 let offers = [];
 let shown = []; // offers on screen, in order (for next/previous)
 const state = { type: 'all', day: '' };
@@ -38,46 +27,6 @@ function transition(update) {
 }
 
 // ---------- loading ----------
-function parseSheet(text) {
-    const json = JSON.parse(text.slice(text.indexOf('(') + 1, text.lastIndexOf(')')));
-    const labels = json.table.cols.map(c => (c.label || '').trim().toLowerCase());
-    const index = {};
-    for (const [key, names] of Object.entries(COMM_COLUMNS)) {
-        const i = labels.findIndex(l => names.includes(l));
-        if (i >= 0) index[key] = i;
-    }
-    return json.table.rows.map(row => {
-        const get = k => index[k] === undefined ? '' : String(row.c[index[k]]?.v ?? '').trim();
-        return Object.fromEntries(Object.keys(COMM_COLUMNS).map(k => [k, get(k)]));
-    });
-}
-
-function toOffer(r, order) {
-    const username = r.username;
-    if (!username || username.toLowerCase() === 'username') return null;
-    const image = String(r.link || '').split(/\s+/).map(safeUrl).find(Boolean); // Link is always a picture
-    if (!image) return null;
-    return {
-        order,
-        username,
-        account: safeUrl(r.account),
-        day: parseInt(r.day) || 0,
-        image,
-        title: r.title,
-        type: /ych/i.test(r.type) ? 'ych' : 'commission',
-        price: formatPrice(r.price),
-        description: r.description,
-    };
-}
-
-// "69420" -> "$69,420", "12.5" -> "$12.50"; anything with words in it ("from $50") is left alone
-function formatPrice(p) {
-    p = String(p ?? '').trim();
-    const n = Number(p.replace(/[$,\s]/g, ''));
-    if (!p || !/^\$?\s*[\d,]*\.?\d+$/.test(p) || !isFinite(n)) return p;
-    return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: Number.isInteger(n) ? 0 : 2 });
-}
-
 function demoRows() {
     const img = n => `${location.origin}/cards/day${n}front.png`;
     return [
@@ -98,18 +47,48 @@ async function load() {
         document.getElementById('controls').hidden = true;
         return;
     } else {
+        const examples = loadEntries();
         try {
-            const res = await fetch(`https://docs.google.com/spreadsheets/d/${H.sheetId}/gviz/tq?tqx=out:json&headers=1&gid=${H.commissionGid}`);
-            offers = parseSheet(await res.text()).map(toOffer).filter(Boolean);
+            const res = await fetch(sheetUrl(H.commissionGid));
+            offers = parseOffers(await res.text());
         } catch (err) {
             console.error('Error fetching data:', err);
             document.getElementById('stats').textContent = "couldn't load commissions right now, try refreshing";
             return;
         }
+        offers.forEach(o => o.examples = []);
+        (await examples).forEach(e => offerFor(e, offers)?.examples.push(e));
     }
     loaded = true;
     fillControls();
     render();
+    openFromUrl();
+}
+
+// entries tied to an offer are shown as its examples; without them the page still works
+async function loadEntries() {
+    if (!H.gid) return [];
+    try {
+        return parseEntries(await (await fetch(sheetUrl(H.gid))).text());
+    } catch (err) {
+        console.error('Error fetching entries:', err);
+        return [];
+    }
+}
+
+// commissions.html?offer=<title>&by=<artist> (linked from the entries page) opens that offer
+function openFromUrl() {
+    const p = new URLSearchParams(location.search);
+    if (!p.has('offer')) return;
+    const o = offerFor({ commission: p.get('offer'), username: p.get('by') }, offers);
+    if (!o) return;
+    if (!shown.includes(o)) {
+        Object.assign(state, { type: 'all', day: '' });
+        document.getElementById('day').value = '';
+        syncControls();
+        render();
+    }
+    openView(shown.indexOf(o));
 }
 
 // ---------- controls ----------
@@ -171,8 +150,6 @@ function update() {
 }
 
 // ---------- rendering ----------
-const typeLabel = t => t === 'ych' ? 'YCH' : 'commission';
-
 function dayHeading(day) {
     if (!day) return 'any day';
     const d = dayInfo(day);
@@ -248,10 +225,25 @@ function infoHtml(o) {
         `<p class="comm-day">${d ? `day ${o.day} · ${esc(d.prompt)} / ${esc(d.character)}` : 'any day'}</p>`,
         o.price ? `<p class="comm-price">${esc(o.price)}</p>` : '',
         o.description ? `<p class="comm-desc">${esc(o.description)}</p>` : '',
+        examplesHtml(o),
         `<p><a class="comm-link" href="${esc(o.image)}" target="_blank" rel="noopener">view original</a></p>`,
         o.account ? `<p><a class="comm-link" href="${esc(o.account)}" target="_blank" rel="noopener">contact ${esc(o.username)}</a></p>` : '',
     ];
     return `<span class="comm-badge ${o.type}">${typeLabel(o.type)}</span><h2>${esc(o.title || typeLabel(o.type))}</h2>${rows.join('')}`;
+}
+
+// small thumbnails of the entries made from this offer, each opening the original
+function examplesHtml(o) {
+    if (!o.examples?.length) return '';
+    const items = o.examples.flatMap(e => e.type === 'art'
+        ? e.links.map(url => {
+            const alt = `${e.title || 'example'} by ${e.username}`;
+            const media = VIDEO_RE.test(url) ? mediaTag(url, { alt })
+                : `<img src="${esc(thumbUrl(url, 240))}" data-original="${esc(url)}" alt="${esc(alt)}" loading="lazy" decoding="async">`;
+            return `<a class="comm-example" href="${esc(url)}" target="_blank" rel="noopener" title="${esc(alt)}">${media}</a>`;
+        })
+        : [`<a class="comm-example story" href="${esc(e.links[0])}" target="_blank" rel="noopener">${esc(e.title || 'story')}<span>by ${esc(e.username)}</span></a>`]);
+    return `<div class="comm-examples"><p>examples (${items.length})</p><div class="comm-example-grid">${items.join('')}</div></div>`;
 }
 
 // builds the next view off-screen; the returned function swaps it in instantly
@@ -277,8 +269,12 @@ async function prepare(i) {
         const media = lb.querySelector('.lb-media');
         if (node) media.replaceChildren(node);
         else media.innerHTML = mediaTag(o.image, { full: true });
-        lb.querySelector('.comm-info').innerHTML = infoHtml(o);
-        lb.querySelector('.comm-info').scrollTop = 0;
+        const info = lb.querySelector('.comm-info');
+        info.innerHTML = infoHtml(o);
+        info.scrollTop = 0;
+        info.querySelectorAll('.comm-example img').forEach(img => {
+            img.onerror = () => { img.onerror = null; img.src = img.dataset.original; };
+        });
     };
 }
 
@@ -328,6 +324,14 @@ async function openView(i) {
 function closeView() {
     if (!lbOpen) return;
     lbOpen = false;
+    // a link from the entries page opened this one; closing shouldn't reopen it on refresh
+    const p = new URLSearchParams(location.search);
+    if (p.has('offer')) {
+        p.delete('offer');
+        p.delete('by');
+        const qs = p.toString();
+        history.replaceState(null, '', qs ? '?' + qs : location.pathname);
+    }
     setAnim('close');
     const current = lbMedia();
     const thumb = thumbOf(viewIndex);

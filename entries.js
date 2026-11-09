@@ -1,17 +1,6 @@
 // All-entries page: loads the sheet once, then sorts/filters in the browser.
 // URL keeps the current view, e.g. all.html?day=5&type=art&sort=oldest
 
-// Column names the sheet can use (case-insensitive). Order doesn't matter, extra columns are ignored.
-const COLUMNS = {
-    username: ['username', 'name', 'artist', 'author'],
-    account: ['account', 'profile', 'account link', 'artist link'],
-    day: ['day'],
-    link: ['link', 'links', 'url'],
-    type: ['type'],
-    title: ['title'],
-};
-const POSITIONAL = ['username', 'account', 'day', 'link', 'type', 'title']; // old layout fallback
-
 let entries = [];
 const state = { sort: 'newest', type: 'all', day: '', artist: '' };
 let lightboxItems = [];
@@ -78,42 +67,15 @@ function animatedRender() {
 let lightboxIndex = 0;
 
 // ---------- loading ----------
-function sheetUrl() {
-    return `https://docs.google.com/spreadsheets/d/${H.sheetId}/gviz/tq?tqx=out:json&headers=1&gid=${H.gid}`;
-}
-
-const cellValue = cell => cell?.v ?? '';
-
-function parseSheet(text) {
-    const json = JSON.parse(text.slice(text.indexOf('(') + 1, text.lastIndexOf(')')));
-    const labels = json.table.cols.map(c => (c.label || '').trim().toLowerCase());
-    const index = {};
-    for (const [key, names] of Object.entries(COLUMNS)) {
-        const i = labels.findIndex(l => names.includes(l));
-        if (i >= 0) index[key] = i;
+// the commission tab is only needed for the YCH/commission labels, so it failing is fine
+async function loadOffers() {
+    if (!H.commissionGid) return [];
+    try {
+        return parseOffers(await (await fetch(sheetUrl(H.commissionGid))).text());
+    } catch (err) {
+        console.error('Error fetching commissions:', err);
+        return [];
     }
-    if (index.link === undefined) POSITIONAL.forEach((k, i) => index[k] = i);
-
-    return json.table.rows.map((row, order) => {
-        const get = k => index[k] === undefined ? '' : cellValue(row.c[index[k]]);
-        const username = String(get('username')).trim();
-        if (!username || username.toLowerCase() === 'username') return null;
-        const links = String(get('link')).split(/\s+/).map(safeUrl).filter(Boolean);
-        if (!links.length) return null;
-        let type = String(get('type')).trim().toLowerCase();
-        if (type !== 'story' && links.every(l => MEDIA_RE.test(l) || /wixmp|catbox|imgur|derpicdn/i.test(l))) type = 'art';
-        if (!type) type = 'story';
-        const day = parseInt(get('day')) || 0;
-        return {
-            order,
-            username,
-            account: safeUrl(get('account')),
-            day,
-            links,
-            type,
-            title: String(get('title')).trim(),
-        };
-    }).filter(Boolean);
 }
 
 async function load() {
@@ -122,14 +84,17 @@ async function load() {
         document.getElementById('controls').hidden = true;
         return;
     }
+    const offers = loadOffers();
     try {
-        const res = await fetch(sheetUrl());
-        entries = parseSheet(await res.text());
+        const res = await fetch(sheetUrl(H.gid));
+        entries = parseEntries(await res.text());
     } catch (err) {
         console.error('Error fetching data:', err);
         document.getElementById('stats').textContent = "couldn't load entries right now, try refreshing";
         return;
     }
+    const list = await offers;
+    entries.forEach(e => e.offer = offerFor(e, list));
     loaded = true;
     fillControls();
     render();
@@ -370,13 +335,23 @@ function entryHtml(e) {
         : esc(e.username);
     const dayLink = e.day ? `<span>day ${e.day}</span>` : '';
     const meta = `<div class="entry-meta"><span>by ${by}</span><span class="entry-side">${dayLink}${statsHtml(e)}</span></div>`;
+    const badge = commBadge(e);
     if (e.type === 'art') {
         const alt = `${e.title || 'art'} by ${e.username}`;
         const count = e.links.length > 1 ? `<span class="count">1/${e.links.length}</span>` : '';
-        return `<div class="entry" data-key="e${e.order}"><button class="entry-art" data-lb="${e.lbStart}" aria-label="view ${esc(alt)}">${mediaTag(e.links[0], { alt })}${count}</button>${meta}</div>`;
+        return `<div class="entry" data-key="e${e.order}"><button class="entry-art" data-lb="${e.lbStart}" aria-label="view ${esc(alt)}">${mediaTag(e.links[0], { alt })}${count}</button>${badge}${meta}</div>`;
     }
     const kind = e.type === 'story' ? 'story' : esc(e.type);
-    return `<div class="entry" data-key="e${e.order}"><div class="entry-story"><span class="kind">${kind}</span><h3><a href="${esc(e.links[0])}" target="_blank" rel="noopener">${esc(e.title || e.links[0])}</a></h3></div>${meta}</div>`;
+    return `<div class="entry" data-key="e${e.order}"><div class="entry-story"><span class="kind">${kind}</span><h3><a href="${esc(e.links[0])}" target="_blank" rel="noopener">${esc(e.title || e.links[0])}</a></h3></div>${badge}${meta}</div>`;
+}
+
+// "YCH" / "commission" tag in the box's corner, linking to the offer it was made for.
+// A title that matches no offer still gets the tag, just without the link.
+function commBadge(e) {
+    if (!e.commission) return '';
+    const type = e.offer ? e.offer.type : /ych/i.test(e.commission) ? 'ych' : 'commission';
+    if (!e.offer) return `<span class="comm-badge ${type}">${typeLabel(type)}</span>`;
+    return `<a class="comm-badge ${type}" href="${esc(offerUrl(e.offer))}" title="${esc(e.offer.title)} by ${esc(e.offer.username)}">${typeLabel(type)}</a>`;
 }
 
 // Each entry's box is built once and moved around afterwards, so images that
@@ -466,7 +441,7 @@ async function prepareItem(i) {
     const alt = `${e.title || 'art'} by ${e.username}`;
     const by = e.account ? `<a href="${esc(e.account)}" target="_blank" rel="noopener">${esc(e.username)}</a>` : esc(e.username);
     const part = e.links.length > 1 ? ` · ${n + 1}/${e.links.length}` : '';
-    const caption = `${e.title ? esc(e.title) + ' · ' : ''}by ${by}${e.day ? ' · ' + dayHeading(e.day) : ''}${part} · <a href="${esc(url)}" target="_blank" rel="noopener">original</a>${statsHtml(e)}`;
+    const caption = `${e.title ? esc(e.title) + ' · ' : ''}by ${by}${e.day ? ' · ' + dayHeading(e.day) : ''}${part} · <a href="${esc(url)}" target="_blank" rel="noopener">original</a>${e.offer ? ` · <a href="${esc(offerUrl(e.offer))}">${typeLabel(e.offer.type)}</a>` : ''}${statsHtml(e)}`;
     const media = lb.querySelector('.lb-media');
     const apply = node => () => {
         lbMedia()?.cancelFull?.();

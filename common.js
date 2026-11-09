@@ -46,6 +46,105 @@ function mediaTag(url, { full = false, alt = '' } = {}) {
     return `<img src="${esc(src)}" data-original="${esc(url)}" alt="${esc(alt)}" loading="${full ? 'eager' : 'lazy'}" decoding="async">`;
 }
 
+// ---------- sheet tabs ----------
+// The entries and commissions pages each read both tabs: an entry is tied to a
+// commission/YCH by putting the offer's title in the entries tab's "Commission?" column.
+function sheetUrl(gid) {
+    return `https://docs.google.com/spreadsheets/d/${H.sheetId}/gviz/tq?tqx=out:json&headers=1&gid=${gid}`;
+}
+
+// rows as { key: trimmed text } using the first column whose header matches one of the names
+function readSheet(text, columns, positional) {
+    const json = JSON.parse(text.slice(text.indexOf('(') + 1, text.lastIndexOf(')')));
+    const labels = json.table.cols.map(c => (c.label || '').trim().toLowerCase());
+    const index = {};
+    for (const [key, names] of Object.entries(columns)) {
+        const i = labels.findIndex(l => names.includes(l));
+        if (i >= 0) index[key] = i;
+    }
+    if (positional && index.link === undefined) positional.forEach((k, i) => index[k] = i);
+    return json.table.rows.map(row =>
+        Object.fromEntries(Object.keys(columns).map(k => [k, index[k] === undefined ? '' : String(row.c[index[k]]?.v ?? '').trim()])));
+}
+
+// Column names the sheet can use (case-insensitive). Order doesn't matter, extra columns are ignored.
+const ENTRY_COLUMNS = {
+    username: ['username', 'name', 'artist', 'author'],
+    account: ['account', 'profile', 'account link', 'artist link'],
+    day: ['day'],
+    link: ['link', 'links', 'url'],
+    type: ['type'],
+    title: ['title'],
+    commission: ['commission?', 'commission', 'commission/ych', 'ych'],
+};
+const ENTRY_POSITIONAL = ['username', 'account', 'day', 'link', 'type', 'title']; // old layout fallback
+
+function toEntry(r, order) {
+    const username = r.username;
+    if (!username || username.toLowerCase() === 'username') return null;
+    const links = r.link.split(/\s+/).map(safeUrl).filter(Boolean);
+    if (!links.length) return null;
+    let type = r.type.toLowerCase();
+    if (type !== 'story' && links.every(l => MEDIA_RE.test(l) || /wixmp|catbox|imgur|derpicdn/i.test(l))) type = 'art';
+    if (!type) type = 'story';
+    return { order, username, account: safeUrl(r.account), day: parseInt(r.day) || 0, links, type, title: r.title, commission: r.commission };
+}
+
+const parseEntries = text => readSheet(text, ENTRY_COLUMNS, ENTRY_POSITIONAL).map(toEntry).filter(Boolean);
+
+const COMM_COLUMNS = {
+    username: ['username', 'name', 'artist'],
+    account: ['account', 'profile', 'account link', 'artist link'],
+    day: ['day'],
+    link: ['link', 'links', 'url'],
+    title: ['title'],
+    type: ['type'],
+    price: ['price', 'cost'],
+    description: ['description', 'details', 'info'],
+};
+
+function toOffer(r, order) {
+    const username = r.username;
+    if (!username || username.toLowerCase() === 'username') return null;
+    const image = String(r.link || '').split(/\s+/).map(safeUrl).find(Boolean); // Link is always a picture
+    if (!image) return null;
+    return {
+        order,
+        username,
+        account: safeUrl(r.account),
+        day: parseInt(r.day) || 0,
+        image,
+        title: r.title,
+        type: /ych/i.test(r.type) ? 'ych' : 'commission',
+        price: formatPrice(r.price),
+        description: r.description,
+    };
+}
+
+const parseOffers = text => readSheet(text, COMM_COLUMNS).map(toOffer).filter(Boolean);
+
+// "69420" -> "$69,420", "12.5" -> "$12.50"; anything with words in it ("from $50") is left alone
+function formatPrice(p) {
+    p = String(p ?? '').trim();
+    const n = Number(p.replace(/[$,\s]/g, ''));
+    if (!p || !/^\$?\s*[\d,]*\.?\d+$/.test(p) || !isFinite(n)) return p;
+    return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: Number.isInteger(n) ? 0 : 2 });
+}
+
+const typeLabel = t => t === 'ych' ? 'YCH' : 'commission';
+
+// The offer an entry names in its "Commission?" column (matched by title, ignoring case).
+// Two offers with the same title: the one by the same artist wins, then the same day.
+const sameText = (a, b) => String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
+function offerFor(e, offers) {
+    if (!e.commission) return null;
+    const named = offers.filter(o => sameText(o.title, e.commission));
+    return named.find(o => sameText(o.username, e.username)) || named.find(o => o.day === e.day) || named[0] || null;
+}
+
+// commissions page link that opens straight to this offer
+const offerUrl = o => `commissions.html?offer=${encodeURIComponent(o.title)}&by=${encodeURIComponent(o.username)}`;
+
 // ---- popups: same slide in / slide out as previous years ----
 function showPanel(el) {
     el.style.display = 'block';
