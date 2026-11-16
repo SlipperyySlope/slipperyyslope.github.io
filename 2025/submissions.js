@@ -1,3 +1,10 @@
+// Smaller copy of an image via wsrv.nl (free image CDN). Loading every full-size
+// original from catbox at once made some of them fail.
+function resized(url) {
+    const anim = /\.gif(\?|$)/i.test(url) ? '&n=-1' : '';
+    return `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=1600&we&output=webp&q=85${anim}`;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const path = window.location.pathname;
     const match = path.match(/(\d+)\.html/);
@@ -35,9 +42,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     `;
                 } else if (type === 'Art') {
+                    // a screen-sized copy loads fast; clicking (or "view original") opens the full file
                     htmlBlock = `
                         <div class="image-content-block">
-                            <img src="${link}">
+                            <a href="${link}" target="_blank" rel="noopener"><img src="${resized(link)}" loading="lazy" onerror="this.onerror=null;this.src=this.parentNode.href"></a>
+                            <a class="view-original" href="${link}" target="_blank" rel="noopener">view original</a>
                             <p>by <a href="${account}" target="_blank">${username}</a></p>
                         </div>
                     `;

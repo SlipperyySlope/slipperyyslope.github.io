@@ -323,3 +323,8 @@ img {
         padding: 20px 0px;
     }
 }
+
+/* each picture links to its full-size original */
+.image-content-block > a:has(> img) { display: block; line-height: 0; }
+.view-original { color: lightblue; font-size: 0.9rem; }
+.view-original:hover { text-decoration: underline; }
