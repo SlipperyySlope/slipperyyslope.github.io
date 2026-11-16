@@ -317,8 +317,29 @@ button {
     justify-content: center;
     text-align: center;
     overflow: hidden;
+    position: relative;
+    isolation: isolate;
 }
+/* faint spiral behind the text that slowly turns while the box is hovered */
+.entry-story::before {
+    content: '';
+    position: absolute;
+    inset: -25%;
+    z-index: -1;
+    background: url('spiral.svg') center / contain no-repeat;
+    opacity: 0.07;
+    transition: opacity 0.4s;
+    animation: story-spin 12.5s linear infinite paused;
+}
+@media (hover: hover) {
+    .entry:hover .entry-story::before { opacity: 0.12; animation-play-state: running; }
+}
+/* phones: the box under your finger turns instead (see entries.js) */
+.entry.touched .entry-story::before { opacity: 0.12; animation-play-state: running; }
+@keyframes story-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .entry-story::before { animation: none; } }
 .entry-story .kind { color: var(--muted); font-size: 0.85rem; letter-spacing: 0.05em; }
+.entry-story .theme { color: var(--muted); font-size: 0.8rem; margin-top: 4px; }
 .entry-story h3 { margin: 6px 0 0; font-size: 1.3rem; }
 .entry-story h3 a { color: var(--link); }
 

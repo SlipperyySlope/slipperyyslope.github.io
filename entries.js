@@ -342,7 +342,9 @@ function entryHtml(e) {
         return `<div class="entry" data-key="e${e.order}"><button class="entry-art" data-lb="${e.lbStart}" aria-label="view ${esc(alt)}">${mediaTag(e.links[0], { alt })}${count}</button>${badge}${meta}</div>`;
     }
     const kind = e.type === 'story' ? 'story' : esc(e.type);
-    return `<div class="entry" data-key="e${e.order}"><div class="entry-story"><span class="kind">${kind}</span><h3><a href="${esc(e.links[0])}" target="_blank" rel="noopener">${esc(e.title || e.links[0])}</a></h3></div>${badge}${meta}</div>`;
+    const d = e.day ? dayInfo(e.day) : null;
+    const theme = d ? `<span class="theme">day ${e.day} · ${esc(d.prompt)} / ${esc(d.character)}</span>` : '';
+    return `<div class="entry" data-key="e${e.order}"><div class="entry-story"><span class="kind">${kind}</span>${theme}<h3><a href="${esc(e.links[0])}" target="_blank" rel="noopener">${esc(e.title || e.links[0])}</a></h3></div>${badge}${meta}</div>`;
 }
 
 // "YCH" / "commission" tag in the box's corner, linking to the offer it was made for.
@@ -592,6 +594,20 @@ document.addEventListener('keydown', ev => {
     if (ev.key === 'ArrowLeft') stepLightbox(-1);
     if (ev.key === 'ArrowRight') stepLightbox(1);
 });
+// phones have no hover: the story spiral turns under your finger while you touch or drag over it
+let touched = null;
+function touchAt(x, y) {
+    const box = document.elementFromPoint(x, y)?.closest('.entry:has(.entry-story)') || null;
+    if (box === touched) return;
+    touched?.classList.remove('touched');
+    box?.classList.add('touched');
+    touched = box;
+}
+const results = document.getElementById('results');
+results.addEventListener('touchstart', ev => touchAt(ev.touches[0].clientX, ev.touches[0].clientY), { passive: true });
+results.addEventListener('touchmove', ev => touchAt(ev.touches[0].clientX, ev.touches[0].clientY), { passive: true });
+['touchend', 'touchcancel'].forEach(type => results.addEventListener(type, () => touchAt(-1, -1), { passive: true }));
+
 // swipe on phones
 let touchX = null;
 lb.addEventListener('touchstart', ev => { touchX = ev.touches[0].clientX; }, { passive: true });
