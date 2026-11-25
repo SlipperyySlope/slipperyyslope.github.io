@@ -365,10 +365,10 @@ function boxFor(e) {
         const t = document.createElement('template');
         t.innerHTML = entryHtml(e);
         el = t.content.firstElementChild;
-        // thumbnail proxy failed → use the original image
-        el.querySelectorAll('img').forEach(img => {
-            img.onerror = () => { img.onerror = null; img.src = img.dataset.original; };
-        });
+        // thumbnail proxy failed → a still first frame for big gifs (marked GIF), else the original
+        el.querySelectorAll('img').forEach(img => proxyFallback(img, img.dataset.original, () => {
+            img.closest('.entry-art')?.insertAdjacentHTML('beforeend', '<span class="gif-badge">GIF</span>');
+        }));
         boxes.set(e.order, el);
     }
     const btn = el.querySelector('[data-lb]');
@@ -460,7 +460,7 @@ async function prepareItem(i) {
     img.decoding = 'sync';
     fitViewer(img, await knownRatio(url));
     img.src = thumbUrl(url); // already cached from the grid
-    img.onerror = () => { img.onerror = null; img.src = url; };
+    proxyFallback(img, url); // big gifs show their still frame until the full file below arrives
     await Promise.race([img.decode().catch(() => {}), new Promise(r => setTimeout(r, 400))]);
     if (!img.style.width && img.naturalWidth) fitViewer(img, img.naturalWidth / img.naturalHeight);
 

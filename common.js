@@ -30,6 +30,27 @@ function thumbUrl(url, w = 480) {
     return `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=${w}&we&output=webp&q=85${anim}`;
 }
 
+// First frame only. wsrv.nl refuses animated gifs over about 71 megapixels
+// (all frames added up), but it can still make a still of their first frame.
+function stillUrl(url, w = 480) {
+    return `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=${w}&we&output=webp&q=85`;
+}
+
+// thumbnail proxy failed: a gif tries a still first frame (and calls onStill),
+// anything else (or a still that fails too) loads the original file
+function proxyFallback(img, url, onStill) {
+    img.onerror = () => {
+        if (/\.gif(\?|$)/i.test(url) && !img.dataset.still) {
+            img.dataset.still = '1';
+            img.src = stillUrl(url);
+            onStill?.();
+        } else {
+            img.onerror = null;
+            img.src = url;
+        }
+    };
+}
+
 // screen-sized copy for the viewer: sharp, but far smaller than the original file
 function viewerUrl(url, cssWidth) {
     const w = Math.min(4000, Math.max(800, Math.ceil(cssWidth * (devicePixelRatio || 1) / 400) * 400));

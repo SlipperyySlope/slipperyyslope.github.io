@@ -308,6 +308,13 @@ button {
     background: #000; color: #fff; padding: 2px 8px; font-size: 0.85rem;
 }
 
+/* still first frame of a gif too big to animate here; it plays in the viewer */
+.entry-art .gif-badge {
+    position: absolute; bottom: 8px; left: 8px;
+    background: #000; color: #fff; border: 1px solid #fff;
+    padding: 2px 8px; font-size: 0.8rem; letter-spacing: 0.05em;
+}
+
 .entry-story {
     border: 1px solid #fff;
     padding: 16px 20px;
